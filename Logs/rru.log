@@ -63,3 +63,91 @@
 [2025-09-23 06:26:36] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
    at LibraryTerminal.Rru9816Reader.Start()
    at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 10:00:05] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 10:02:29] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 12:04:42] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 12:07:29] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 12:12:30] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 12:19:51] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 12:23:30] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 12:26:01] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 12:29:11] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 12:32:45] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 12:55:58] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:02:29] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:04:43] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:08:11] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:08:53] RRU INIT EX: System.InvalidOperationException: RRU9816: порт не найден/не открыт (последний ret=48). COM занят другим процессом или скорость/адрес не совпадают с настройкой устройства.
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:09:05] RRU INIT EX: System.InvalidOperationException: RRU9816: SetWorkMode failed (ret=254).
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:11:11] RRU INIT EX: System.InvalidOperationException: RRU9816: SetWorkMode failed (ret=254).
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:11:21] RRU INIT EX: System.InvalidOperationException: RRU9816: SetWorkMode failed (ret=254).
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:12:19] RRU INIT EX: System.InvalidOperationException: RRU9816: SetWorkMode failed (ret=254).
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:27:00] RRU INIT EX: System.InvalidOperationException: RRU9816: SetWorkMode failed (ret=254/254)
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:27:24] RRU INIT EX: System.InvalidOperationException: RRU9816: SetWorkMode failed (ret=254/254)
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 13:31:59] [RRU-DLL] Started on COM5 @ 57600 (mode: active→command fallback, adr=0x00)
+[2025-09-25 13:36:46] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 13:53:11] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 13:58:58] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 13:59:23] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:07:17] RRU INIT EX: System.InvalidOperationException: RRU9816: SetWorkMode(command) failed (ret=254)
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 14:08:13] RRU INIT EX: System.InvalidOperationException: RRU9816: SetWorkMode(command) failed (ret=254)
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-09-25 14:11:45] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:12:04] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:18:11] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:18:44] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:23:14] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:34:17] DLL NOT FOUND: Unable to load DLL 'UHFReader18.dll': The specified module could not be found. (Exception from HRESULT: 0x8007007E)
+[2025-09-25 14:34:30] DLL NOT FOUND: Unable to load DLL 'UHFReader18.dll': The specified module could not be found. (Exception from HRESULT: 0x8007007E)
+[2025-09-25 14:36:35] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:38:23] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:39:18] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:39:35] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:41:25] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:41:51] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)
+[2025-09-25 14:44:26] [RRU-DLL] Started on COM5 @ 57600 (adr=0x00)

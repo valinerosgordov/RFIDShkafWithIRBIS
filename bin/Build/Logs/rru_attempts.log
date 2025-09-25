@@ -1,0 +1,101 @@
+﻿[2025-09-25 13:26:59] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 13:27:00] OpenComPort -> ret=0, frmIdx=5
+[2025-09-25 13:27:00] SetWorkMode(1=active) -> ret=254
+[2025-09-25 13:27:00] SetWorkMode(0=command) -> ret=254
+[2025-09-25 13:27:23] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 13:27:24] OpenComPort -> ret=0, frmIdx=5
+[2025-09-25 13:27:24] SetWorkMode(1=active) -> ret=254
+[2025-09-25 13:27:24] SetWorkMode(0=command) -> ret=254
+[2025-09-25 13:31:59] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 13:31:59] OpenComPort -> ret=0, frmIdx=5
+[2025-09-25 13:36:45] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 13:36:46] OpenComPort -> ret=0, frmIdx=5
+[2025-09-25 13:36:46] SetWorkMode(1=active) -> ret=254
+[2025-09-25 13:36:46] SetWorkMode(0=command) -> ret=254
+[2025-09-25 13:53:11] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 13:53:11] OpenComPort -> ret=0, frmIdx=5
+[2025-09-25 13:53:11] SetWorkMode(1=active) -> ret=254
+[2025-09-25 13:53:11] SetWorkMode(0=command) -> ret=254
+[2025-09-25 13:58:58] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 13:58:58] OpenComPort -> ret=0, frmIdx=5
+[2025-09-25 13:58:58] SetWorkMode(1=active) -> ret=254
+[2025-09-25 13:58:58] SetWorkMode(0=command) -> ret=254
+[2025-09-25 13:59:22] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 13:59:23] OpenComPort -> ret=0, frmIdx=5
+[2025-09-25 13:59:23] SetWorkMode(1=active) -> ret=254
+[2025-09-25 13:59:23] SetWorkMode(0=command) -> ret=254
+[2025-09-25 14:07:17] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:07:17] OpenComPort -> ret=0, frmIdx=5
+[2025-09-25 14:07:17] SetWorkMode(command) -> ret=254
+[2025-09-25 14:08:12] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:08:13] OpenComPort -> ret=0, frmIdx=5
+[2025-09-25 14:08:13] SetWorkMode(command) -> ret=254
+[2025-09-25 14:11:44] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:11:44] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:11:45] SetWorkMode(command) -> ret=254 (ignored if !=0)
+[2025-09-25 14:11:45] ClearTagBuffer -> ret=254
+[2025-09-25 14:11:45] RRU ready: COM5 @ 57600 (mode: command, adr=0x00)
+[2025-09-25 14:12:03] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:12:04] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:12:04] SetWorkMode(command) -> ret=254 (ignored if !=0)
+[2025-09-25 14:12:04] ClearTagBuffer -> ret=254
+[2025-09-25 14:12:04] RRU ready: COM5 @ 57600 (mode: command, adr=0x00)
+[2025-09-25 14:18:11] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:18:11] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:18:11] SetWorkMode(command) -> ret=254 (ignored if !=0)
+[2025-09-25 14:18:11] ClearTagBuffer -> ret=254
+[2025-09-25 14:18:11] RRU ready: COM5 @ 57600 (mode: command, adr=0x00)
+[2025-09-25 14:18:43] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:18:44] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:18:44] RRU ready (command mode assumed): COM5 @ 57600, adr=0x00
+[2025-09-25 14:23:14] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:23:14] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:23:14] SetWorkMode(command) -> ret=254 (ignored if !=0)
+[2025-09-25 14:23:14] ClearTagBuffer -> ret=254 (ignored)
+[2025-09-25 14:23:14] RRU ready (command-mode assumed): COM5 @ 57600, adr=0x00
+[2025-09-25 14:34:17] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:34:30] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:36:35] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:36:35] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:36:35] SetWorkMode(command) -> ret=254 (ignored if !=0)
+[2025-09-25 14:36:35] RRU ready: COM5 @ 57600 (command-mode assumed, adr=0x00)
+[2025-09-25 14:38:23] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:38:23] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:38:23] RRU ready (command-mode): COM5 @ 57600, adr=0x00
+[2025-09-25 14:39:17] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:39:18] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:39:18] RRU ready (command-mode): COM5 @ 57600, adr=0x00
+[2025-09-25 14:39:35] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:39:35] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:39:35] RRU ready (command-mode): COM5 @ 57600, adr=0x00
+[2025-09-25 14:41:24] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:41:25] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:41:25] RRU ready (command-mode): COM5 @ 57600, adr=0x00
+[2025-09-25 14:41:51] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:41:51] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:41:51] RRU ready (command-mode): COM5 @ 57600, adr=0x00
+[2025-09-25 14:44:25] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-09-25 14:44:26] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-09-25 14:44:26] RRU ready (command-mode): COM5 @ 57600, adr=0x00
+[2025-09-25 14:44:28] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x01
+[2025-09-25 14:44:30] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x0F
+[2025-09-25 14:44:33] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x80
+[2025-09-25 14:44:35] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x01
+[2025-09-25 14:44:37] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x0F
+[2025-09-25 14:44:40] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x80
+[2025-09-25 14:44:42] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x01
+[2025-09-25 14:44:44] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x0F
+[2025-09-25 14:44:47] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x80
+[2025-09-25 14:44:49] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x01
+[2025-09-25 14:44:51] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x0F
+[2025-09-25 14:44:54] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x80
+[2025-09-25 14:44:56] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x01
+[2025-09-25 14:44:58] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x0F
+[2025-09-25 14:45:01] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x80
+[2025-09-25 14:45:03] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x01
+[2025-09-25 14:45:05] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x0F
+[2025-09-25 14:45:08] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x80
+[2025-09-25 14:45:10] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x01
+[2025-09-25 14:45:12] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x0F
+[2025-09-25 14:45:15] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x80
+[2025-09-25 14:45:17] Inventory_G2: ret=55, epcLen=8192, cardNum=0, InAnt=0x01

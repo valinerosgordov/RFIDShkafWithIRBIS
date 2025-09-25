@@ -3,7 +3,7 @@
   "WorkspaceRootPath": "C:\\SideProjects\\RFIDShkafWithIRBIS\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{EC9BBA34-FD53-4982-A9DB-BF574D92A978}|LibraryTerminal.csproj|C:\\SideProjects\\RFIDShkafWithIRBIS\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{EC9BBA34-FD53-4982-A9DB-BF574D92A978}|LibraryTerminal.csproj|c:\\sideprojects\\rfidshkafwithirbis\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{EC9BBA34-FD53-4982-A9DB-BF574D92A978}|LibraryTerminal.csproj|solutionrelative:mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -15,7 +15,7 @@
       "RelativeMoniker": "D:0:0:{EC9BBA34-FD53-4982-A9DB-BF574D92A978}|LibraryTerminal.csproj|solutionrelative:rruopenhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{EC9BBA34-FD53-4982-A9DB-BF574D92A978}|LibraryTerminal.csproj|c:\\sideprojects\\rfidshkafwithirbis\\app.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
+      "AbsoluteMoniker": "D:0:0:{EC9BBA34-FD53-4982-A9DB-BF574D92A978}|LibraryTerminal.csproj|C:\\SideProjects\\RFIDShkafWithIRBIS\\app.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
       "RelativeMoniker": "D:0:0:{EC9BBA34-FD53-4982-A9DB-BF574D92A978}|LibraryTerminal.csproj|solutionrelative:app.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
     },
     {
@@ -44,7 +44,7 @@
         },
         {
           "DockedHeight": 13,
-          "SelectedChildIndex": 7,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
@@ -64,7 +64,19 @@
               "RelativeToolTip": "App.config",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAADEAAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000601|",
-              "WhenOpened": "2025-09-21T04:49:38.794Z",
+              "WhenOpened": "2025-09-21T04:49:38.794Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MainForm.cs",
+              "DocumentMoniker": "C:\\SideProjects\\RFIDShkafWithIRBIS\\MainForm.cs",
+              "RelativeDocumentMoniker": "MainForm.cs",
+              "ToolTip": "C:\\SideProjects\\RFIDShkafWithIRBIS\\MainForm.cs",
+              "RelativeToolTip": "MainForm.cs",
+              "ViewState": "AgIAAB0EAAAAAAAAAAAAAEMEAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-12T01:27:18.209Z",
               "EditorCaption": ""
             },
             {
@@ -93,8 +105,7 @@
               "RelativeToolTip": "RruOpenHelper.cs",
               "ViewState": "AgIAABoAAAAAAAAAAAArwCwAAAA1AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-23T02:18:31.854Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-23T02:18:31.854Z"
             },
             {
               "$type": "Document",
@@ -106,21 +117,7 @@
               "RelativeToolTip": "IrbisServiceManaged.cs",
               "ViewState": "AgIAAOoAAAAAAAAAAAAAAP8AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-10T16:02:56.975Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "MainForm.cs",
-              "DocumentMoniker": "C:\\SideProjects\\RFIDShkafWithIRBIS\\MainForm.cs",
-              "RelativeDocumentMoniker": "MainForm.cs",
-              "ToolTip": "C:\\SideProjects\\RFIDShkafWithIRBIS\\MainForm.cs",
-              "RelativeToolTip": "MainForm.cs",
-              "ViewState": "AgIAACYEAAAAAAAAAAAAAEMEAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-12T01:27:18.209Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-10T16:02:56.975Z"
             },
             {
               "$type": "Document",

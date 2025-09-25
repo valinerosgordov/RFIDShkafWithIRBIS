@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 
+// ИРБИС клиент для форматирования brief
 using ManagedClient;
 
 // PC/SC
@@ -18,6 +19,7 @@ using WinFormsTimer = System.Windows.Forms.Timer;
 
 namespace LibraryTerminal
 {
+    // ===== Глобальный логгер: пишет в LogsDir из App.config, иначе в .\Logs рядом с exe =====
     internal static class Logger
     {
         private static readonly string _dir = InitDir();
@@ -69,7 +71,7 @@ namespace LibraryTerminal
         private static readonly bool DEMO_UI = bool.TryParse(ConfigurationManager.AppSettings["UseEmulator"], out _emuUI) && _emuUI;
         private static readonly bool DEMO_KEYS = bool.TryParse(ConfigurationManager.AppSettings["DemoKeys"], out _dk) && _dk;
 
-        
+        // >>> NEW: флаги для гибкой инициализации железа в демо
         private static bool _forceCards;
         private static readonly bool FORCE_CARD_READERS_IN_EMU =
             bool.TryParse(ConfigurationManager.AppSettings["ForceCardReadersInEmu"], out _forceCards) && _forceCards;
@@ -83,7 +85,7 @@ namespace LibraryTerminal
         private const string STATUS_IN_STOCK = "0";
         private const string STATUS_ISSUED = "1";
 
-      
+        // IRBIS и оборудование
         private IrbisServiceManaged _svc;
 
         private BookReaderSerial _bookTake;
@@ -91,14 +93,14 @@ namespace LibraryTerminal
         private ArduinoClientSerial _ardu;
 
         private Acr1281PcscReader _acr;
-        private Rru9816Reader _rruDll; 
+        private Rru9816Reader _rruDll; // чтение UHF через вендорскую DLL
 
         private BookReaderSerial _iqrfid;
 
         private string _lastBookTag = null;
         private string _lastRruEpc = null;
 
-
+        // Эмулятор UI
         private Panel _emuPanel;
 
         private TextBox _emuUid;
@@ -187,16 +189,16 @@ namespace LibraryTerminal
 
             if (DEMO_UI) AddBackButtonForSim();
 
-            
+            // >>> CHANGED: не выходим сразу при эмуляторе, если нужно поднять карточные ридеры
             if (USE_EMULATOR)
             {
                 InitializeEmulatorPanel();
                 if (!FORCE_CARD_READERS_IN_EMU)
                 {
-                    
+                    // эмуляторный UI без железа
                     return;
                 }
-             
+                // иначе продолжаем инициализацию железа ниже
             }
 
             try
@@ -206,7 +208,7 @@ namespace LibraryTerminal
                 int reconnMs = int.Parse(ConfigurationManager.AppSettings["AutoReconnectMs"] ?? "1500");
                 int debounce = int.Parse(ConfigurationManager.AppSettings["DebounceMs"] ?? "250");
 
-                
+                // --- COM: книжные ридеры + Arduino (делаем опциональными для демо)
                 try
                 {
                     if (ENABLE_BOOK_SCANNERS)
@@ -256,15 +258,15 @@ namespace LibraryTerminal
                     MessageBox.Show("Оборудование (COM): " + ex.Message, "COM", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-               
+                // --- RRU9816 через DLL
                 try
                 {
                     string rruPort = ConfigurationManager.AppSettings["RruPort"] ?? "COM5";
-                    int rruBaud = int.Parse(ConfigurationManager.AppSettings["RruBaudRate"] ?? "115200");
+                    int rruBaud = int.Parse(ConfigurationManager.AppSettings["RruBaudRate"] ?? "57600");
 
                     _rruDll = null;
 
-                    // На демо адрес = 0x00. Передаём именно 0x00.
+                    // На демо адрес = 0x00.
                     var rruDll = new Rru9816Reader(rruPort, rruBaud, 0x00);
 
                     rruDll.OnEpcHex += OnRruEpc;       // бизнес-обработка
@@ -272,10 +274,11 @@ namespace LibraryTerminal
 
                     rruDll.Start();
 
-                    var line = $"[RRU-DLL] Started on {(string.IsNullOrWhiteSpace(rruPort) ? "AUTO" : rruPort)} @ {rruBaud} (active mode, adr=0x00)";
+                    var line = $"[RRU-DLL] Started on {(string.IsNullOrWhiteSpace(rruPort) ? "AUTO" : rruPort)} @ {rruBaud} (adr=0x00)";
                     Console.WriteLine(line);
                     Debug.WriteLine(line);
                     Logger.Append("rru.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {line}");
+                    ;
 
                     _rruDll = rruDll;
                 } catch (BadImageFormatException ex)
@@ -299,7 +302,7 @@ namespace LibraryTerminal
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-               
+                // --- COM: IQRFID-5102 (карты)
                 try
                 {
                     string iqPort = PortResolver.Resolve(ConfigurationManager.AppSettings["IqrfidPort"]);
@@ -317,7 +320,7 @@ namespace LibraryTerminal
                     MessageBox.Show("IQRFID-5102: " + ex.Message, "IQRFID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-               
+                // --- PC/SC: ACR1281
                 try
                 {
                     // >>> CHANGED: берём точное имя из конфига, иначе автопоиск
@@ -435,7 +438,7 @@ namespace LibraryTerminal
             }
         }
 
-      
+        // ---------- обработка UID ----------
         private void OnAnyCardUid(string rawUid, string source)
         {
             if (InvokeRequired) { BeginInvoke(new Action<string, string>(OnAnyCardUid), rawUid, source); return; }
@@ -664,7 +667,7 @@ namespace LibraryTerminal
             }
         }
 
-     
+        // ====== ВОЗВРАТ ======
         private async Task HandleReturnAsync(string bookTag)
         {
             try
@@ -1072,7 +1075,7 @@ namespace LibraryTerminal
             return false;
         }
 
-        
+        // Временный лог: что реально сравниваем с 910^h
         private static void Log910Compare(ManagedClient.IrbisRecord rec, string scanned)
         {
             try
@@ -1090,6 +1093,7 @@ namespace LibraryTerminal
             } catch { }
         }
 
+        // небольшой alias, чтобы не ошибиться именем
         private Screen Screen_ScanTake { get { return Screen.S3_WaitBookTake; } }
     }
 }

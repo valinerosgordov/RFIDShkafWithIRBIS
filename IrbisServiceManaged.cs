@@ -19,6 +19,7 @@ namespace LibraryTerminal
         public string CurrentLogin { get; private set; }
         public int LastReaderMfn { get; private set; }
 
+        // === Подключение ===
         public void Connect()
         {
             var cs = ConfigurationManager.AppSettings["connection-string"]
@@ -96,7 +97,7 @@ namespace LibraryTerminal
             _currentDb = dbName;
         }
 
-        
+        // === Нормализация идентификаторов (RFID/UID/EPC/инв.) ===
         private static string NormalizeId(string s)
         {
             if (string.IsNullOrWhiteSpace(s)) return null;
@@ -105,6 +106,7 @@ namespace LibraryTerminal
             return s.ToUpperInvariant();
         }
 
+        // === Вспомогательные ===
         private string GetMaskMrg()
         {
             try
@@ -115,6 +117,7 @@ namespace LibraryTerminal
             } catch { return "09"; }
         }
 
+        // Пишем в Logs через общий Logger
         private static void LogIrbis(string msg)
         {
             try
@@ -159,6 +162,7 @@ namespace LibraryTerminal
             finally { _client.Database = saved; }
         }
 
+        // Быстрая проверка коннекта
         public bool TestConnection(out string error)
         {
             try
@@ -176,7 +180,9 @@ namespace LibraryTerminal
             }
         }
 
-        
+        // === API для UI ===
+
+        /// <summary>Проверка карты читателя по UID. True — найден.</summary>
         public bool ValidateCard(string uid)
         {
             if (string.IsNullOrWhiteSpace(uid)) return false;
@@ -206,7 +212,10 @@ namespace LibraryTerminal
             return false;
         }
 
-      
+        /// <summary>
+        /// Поиск книги по RFID-метке (910^h) в IBIS.
+        /// По умолчанию используем IN= (рекомендация разработчика), но пробуем и H/HI/HIN/RF/RFID.
+        /// </summary>
         public MarcRecord FindOneByBookRfid(string rfid)
         {
             rfid = NormalizeId(rfid);
@@ -254,6 +263,9 @@ namespace LibraryTerminal
             return found;
         }
 
+        /// <summary>
+        /// Универсальный поиск: если 24HEX — метка (по IN=), иначе можно задать другой шаблон.
+        /// </summary>
         public MarcRecord FindOneByInvOrTag(string value)
         {
             value = NormalizeId(value);
