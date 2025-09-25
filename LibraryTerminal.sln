@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36414.22
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryTerminal", "LibraryTerminal.csproj", "{EC9BBA34-FD53-4982-A9DB-BF574D92A978}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Build|Any CPU = Build|Any CPU
+		Build|x86 = Build|x86
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EC9BBA34-FD53-4982-A9DB-BF574D92A978}.Build|Any CPU.ActiveCfg = Build|Any CPU
+		{EC9BBA34-FD53-4982-A9DB-BF574D92A978}.Build|Any CPU.Build.0 = Build|Any CPU
+		{EC9BBA34-FD53-4982-A9DB-BF574D92A978}.Build|x86.ActiveCfg = Build|Any CPU
+		{EC9BBA34-FD53-4982-A9DB-BF574D92A978}.Build|x86.Build.0 = Build|Any CPU
+		{EC9BBA34-FD53-4982-A9DB-BF574D92A978}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{EC9BBA34-FD53-4982-A9DB-BF574D92A978}.Debug|x86.ActiveCfg = Debug|x86
+		{EC9BBA34-FD53-4982-A9DB-BF574D92A978}.Debug|x86.Build.0 = Debug|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4CD905CA-F55B-4557-A738-BED5E267036D}
+	EndGlobalSection
+EndGlobal

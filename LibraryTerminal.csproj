@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{EC9BBA34-FD53-4982-A9DB-BF574D92A978}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>LibraryTerminal</RootNamespace>
+    <AssemblyName>LibraryTerminal</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Build'">
+    <OutputPath>bin\Build\</OutputPath>
+    <Prefer32Bit>false</Prefer32Bit>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>LibraryTerminal.Program</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ManagedClient">
+      <HintPath>..\LibraryRFSbp\ManagedClient\bin\Release\ManagedClient.dll</HintPath>
+    </Reference>
+    <Reference Include="PCSC, Version=4.2.0.0, Culture=neutral, PublicKeyToken=13b76e54a2ee80a7, processorArchitecture=MSIL">
+      <HintPath>packages\PCSC.4.2.0\lib\net40\PCSC.dll</HintPath>
+    </Reference>
+    <Reference Include="PCSC.Iso7816, Version=4.2.0.0, Culture=neutral, PublicKeyToken=13b76e54a2ee80a7, processorArchitecture=MSIL">
+      <HintPath>packages\PCSC.Iso7816.4.2.0\lib\net40\PCSC.Iso7816.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Acr1281PcscReader.cs" />
+    <Compile Include="Devices.cs" />
+    <Compile Include="EpcParser.cs" />
+    <Compile Include="IrbisServiceManaged.cs" />
+    <Compile Include="McCompatExtensions.cs" />
+    <Compile Include="PcscReader.cs" />
+    <Compile Include="PortResolver.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="MainForm.cs" />
+    <Compile Include="MainForm.Designer.cs" />
+    <Compile Include="Rru9816Reader.cs" />
+    <Compile Include="RruOpenHelper.cs" />
+    <Compile Include="SerialWorker.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="MainForm.resx">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

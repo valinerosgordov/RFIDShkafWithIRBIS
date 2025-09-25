@@ -1,0 +1,234 @@
+﻿[2025-09-23 05:43:39] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0xFF
+[2025-09-23 05:43:41] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:43:41] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0x00
+[2025-09-23 05:43:44] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:43:44] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0xFF
+[2025-09-23 05:43:46] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:43:46] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0x00
+[2025-09-23 05:43:48] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:43:49] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0xFF
+[2025-09-23 05:43:51] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:43:51] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0x00
+[2025-09-23 05:54:17] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0x00
+[2025-09-23 05:54:19] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:20] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0xFF
+[2025-09-23 05:54:22] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:22] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0x00
+[2025-09-23 05:54:24] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:24] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0xFF
+[2025-09-23 05:54:27] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:27] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0x00
+[2025-09-23 05:54:29] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:29] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0xFF
+[2025-09-23 05:54:32] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:32] TRY OpenComPort: COM5 @ 38400 (code=2), ADR=0x00
+[2025-09-23 05:54:34] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:34] TRY OpenComPort: COM5 @ 38400 (code=2), ADR=0xFF
+[2025-09-23 05:54:37] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:37] TRY OpenComPort: COM5 @ 19200 (code=1), ADR=0x00
+[2025-09-23 05:54:39] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:39] TRY OpenComPort: COM5 @ 19200 (code=1), ADR=0xFF
+[2025-09-23 05:54:41] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:42] TRY OpenComPort: COM5 @ 9600 (code=0), ADR=0x00
+[2025-09-23 05:54:44] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:44] TRY OpenComPort: COM5 @ 9600 (code=0), ADR=0xFF
+[2025-09-23 05:54:46] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 05:54:46] TRY AutoOpenComPort: ? @ 115200 (code=4), ADR=0x00
+[2025-09-23 05:54:49] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:54:49] TRY AutoOpenComPort: ? @ 115200 (code=4), ADR=0xFF
+[2025-09-23 05:54:51] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:54:51] TRY AutoOpenComPort: ? @ 115200 (code=5), ADR=0x00
+[2025-09-23 05:54:53] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:54:53] TRY AutoOpenComPort: ? @ 115200 (code=5), ADR=0xFF
+[2025-09-23 05:54:55] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:54:56] TRY AutoOpenComPort: ? @ 57600 (code=3), ADR=0x00
+[2025-09-23 05:54:58] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:54:58] TRY AutoOpenComPort: ? @ 57600 (code=3), ADR=0xFF
+[2025-09-23 05:55:00] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:55:00] TRY AutoOpenComPort: ? @ 38400 (code=2), ADR=0x00
+[2025-09-23 05:55:02] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:55:02] TRY AutoOpenComPort: ? @ 38400 (code=2), ADR=0xFF
+[2025-09-23 05:55:04] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:55:05] TRY AutoOpenComPort: ? @ 19200 (code=1), ADR=0x00
+[2025-09-23 05:55:07] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:55:07] TRY AutoOpenComPort: ? @ 19200 (code=1), ADR=0xFF
+[2025-09-23 05:55:09] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:55:09] TRY AutoOpenComPort: ? @ 9600 (code=0), ADR=0x00
+[2025-09-23 05:55:11] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 05:55:11] TRY AutoOpenComPort: ? @ 9600 (code=0), ADR=0xFF
+[2025-09-23 05:55:13] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:15:43] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0x00
+[2025-09-23 06:15:45] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:15:45] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0xFF
+[2025-09-23 06:15:48] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:15:48] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0x00
+[2025-09-23 06:15:50] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:15:50] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0xFF
+[2025-09-23 06:15:53] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:15:53] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0x00
+[2025-09-23 06:15:55] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:15:55] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0xFF
+[2025-09-23 06:15:58] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:15:58] TRY OpenComPort: COM5 @ 38400 (code=2), ADR=0x00
+[2025-09-23 06:16:00] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:16:00] TRY OpenComPort: COM5 @ 38400 (code=2), ADR=0xFF
+[2025-09-23 06:16:02] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:16:03] TRY OpenComPort: COM5 @ 19200 (code=1), ADR=0x00
+[2025-09-23 06:16:05] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:16:05] TRY OpenComPort: COM5 @ 19200 (code=1), ADR=0xFF
+[2025-09-23 06:16:07] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:16:07] TRY OpenComPort: COM5 @ 9600 (code=0), ADR=0x00
+[2025-09-23 06:16:10] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:16:10] TRY OpenComPort: COM5 @ 9600 (code=0), ADR=0xFF
+[2025-09-23 06:16:12] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:16:12] TRY AutoOpenComPort: ? @ 115200 (code=4), ADR=0x00
+[2025-09-23 06:16:14] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:15] TRY AutoOpenComPort: ? @ 115200 (code=4), ADR=0xFF
+[2025-09-23 06:16:17] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:17] TRY AutoOpenComPort: ? @ 115200 (code=5), ADR=0x00
+[2025-09-23 06:16:19] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:19] TRY AutoOpenComPort: ? @ 115200 (code=5), ADR=0xFF
+[2025-09-23 06:16:21] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:21] TRY AutoOpenComPort: ? @ 57600 (code=3), ADR=0x00
+[2025-09-23 06:16:24] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:24] TRY AutoOpenComPort: ? @ 57600 (code=3), ADR=0xFF
+[2025-09-23 06:16:26] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:26] TRY AutoOpenComPort: ? @ 38400 (code=2), ADR=0x00
+[2025-09-23 06:16:28] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:28] TRY AutoOpenComPort: ? @ 38400 (code=2), ADR=0xFF
+[2025-09-23 06:16:30] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:30] TRY AutoOpenComPort: ? @ 19200 (code=1), ADR=0x00
+[2025-09-23 06:16:33] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:33] TRY AutoOpenComPort: ? @ 19200 (code=1), ADR=0xFF
+[2025-09-23 06:16:35] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:35] TRY AutoOpenComPort: ? @ 9600 (code=0), ADR=0x00
+[2025-09-23 06:16:37] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:16:37] TRY AutoOpenComPort: ? @ 9600 (code=0), ADR=0xFF
+[2025-09-23 06:16:39] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:17:39] EXACT Open: COM5 @ 115200 (code=4), ADR=0x00
+[2025-09-23 06:17:42] EXACT -> ret=48, frmIdx=-1
+[2025-09-23 06:17:42] EXACT Open: COM5 @ 115200 (code=4), ADR=0xFF
+[2025-09-23 06:17:44] EXACT -> ret=48, frmIdx=-1
+[2025-09-23 06:17:44] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0x00
+[2025-09-23 06:17:46] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:17:47] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0xFF
+[2025-09-23 06:17:49] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:17:49] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0x00
+[2025-09-23 06:17:51] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:17:51] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0xFF
+[2025-09-23 06:17:54] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:17:54] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0x00
+[2025-09-23 06:17:56] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:17:56] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0xFF
+[2025-09-23 06:17:59] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:17:59] TRY OpenComPort: COM5 @ 38400 (code=2), ADR=0x00
+[2025-09-23 06:18:01] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:18:01] TRY OpenComPort: COM5 @ 38400 (code=2), ADR=0xFF
+[2025-09-23 06:18:03] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:18:04] TRY OpenComPort: COM5 @ 19200 (code=1), ADR=0x00
+[2025-09-23 06:18:06] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:18:06] TRY OpenComPort: COM5 @ 19200 (code=1), ADR=0xFF
+[2025-09-23 06:18:08] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:18:09] TRY OpenComPort: COM5 @ 9600 (code=0), ADR=0x00
+[2025-09-23 06:18:11] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:18:11] TRY OpenComPort: COM5 @ 9600 (code=0), ADR=0xFF
+[2025-09-23 06:18:13] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:18:13] TRY AutoOpenComPort: ? @ 115200 (code=4), ADR=0x00
+[2025-09-23 06:18:16] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:16] TRY AutoOpenComPort: ? @ 115200 (code=4), ADR=0xFF
+[2025-09-23 06:18:18] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:18] TRY AutoOpenComPort: ? @ 115200 (code=5), ADR=0x00
+[2025-09-23 06:18:20] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:20] TRY AutoOpenComPort: ? @ 115200 (code=5), ADR=0xFF
+[2025-09-23 06:18:22] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:22] TRY AutoOpenComPort: ? @ 57600 (code=3), ADR=0x00
+[2025-09-23 06:18:25] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:25] TRY AutoOpenComPort: ? @ 57600 (code=3), ADR=0xFF
+[2025-09-23 06:18:27] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:27] TRY AutoOpenComPort: ? @ 38400 (code=2), ADR=0x00
+[2025-09-23 06:18:29] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:29] TRY AutoOpenComPort: ? @ 38400 (code=2), ADR=0xFF
+[2025-09-23 06:18:31] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:31] TRY AutoOpenComPort: ? @ 19200 (code=1), ADR=0x00
+[2025-09-23 06:18:34] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:34] TRY AutoOpenComPort: ? @ 19200 (code=1), ADR=0xFF
+[2025-09-23 06:18:36] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:36] TRY AutoOpenComPort: ? @ 9600 (code=0), ADR=0x00
+[2025-09-23 06:18:38] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:18:38] TRY AutoOpenComPort: ? @ 9600 (code=0), ADR=0xFF
+[2025-09-23 06:18:40] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:24:49] EXACT Open: COM5 @ 115200 (code=4), ADR=0x00
+[2025-09-23 06:24:52] EXACT -> ret=48, frmIdx=-1
+[2025-09-23 06:24:52] EXACT Open: COM5 @ 115200 (code=4), ADR=0xFF
+[2025-09-23 06:24:54] EXACT -> ret=48, frmIdx=-1
+[2025-09-23 06:24:54] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0x00
+[2025-09-23 06:24:57] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:24:57] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0xFF
+[2025-09-23 06:24:59] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:24:59] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0x00
+[2025-09-23 06:25:01] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:02] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0xFF
+[2025-09-23 06:25:04] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:04] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0x00
+[2025-09-23 06:25:06] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:06] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0xFF
+[2025-09-23 06:25:09] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:09] TRY OpenComPort: COM5 @ 38400 (code=2), ADR=0x00
+[2025-09-23 06:25:11] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:11] TRY OpenComPort: COM5 @ 38400 (code=2), ADR=0xFF
+[2025-09-23 06:25:14] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:14] TRY OpenComPort: COM5 @ 19200 (code=1), ADR=0x00
+[2025-09-23 06:25:16] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:16] TRY OpenComPort: COM5 @ 19200 (code=1), ADR=0xFF
+[2025-09-23 06:25:35] EXACT Open: COM5 @ 57600 (code=3), ADR=0x00
+[2025-09-23 06:25:37] EXACT -> ret=48, frmIdx=-1
+[2025-09-23 06:25:37] EXACT Open: COM5 @ 57600 (code=3), ADR=0xFF
+[2025-09-23 06:25:40] EXACT -> ret=48, frmIdx=-1
+[2025-09-23 06:25:40] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0x00
+[2025-09-23 06:25:42] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:42] TRY OpenComPort: COM5 @ 57600 (code=3), ADR=0xFF
+[2025-09-23 06:25:45] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:45] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0x00
+[2025-09-23 06:25:47] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:47] TRY OpenComPort: COM5 @ 115200 (code=4), ADR=0xFF
+[2025-09-23 06:25:49] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:50] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0x00
+[2025-09-23 06:25:52] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:52] TRY OpenComPort: COM5 @ 115200 (code=5), ADR=0xFF
+[2025-09-23 06:25:54] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:54] TRY OpenComPort: COM5 @ 38400 (code=2), ADR=0x00
+[2025-09-23 06:25:57] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:57] TRY OpenComPort: COM5 @ 38400 (code=2), ADR=0xFF
+[2025-09-23 06:25:59] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:25:59] TRY OpenComPort: COM5 @ 19200 (code=1), ADR=0x00
+[2025-09-23 06:26:02] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:26:02] TRY OpenComPort: COM5 @ 19200 (code=1), ADR=0xFF
+[2025-09-23 06:26:04] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:26:04] TRY OpenComPort: COM5 @ 9600 (code=0), ADR=0x00
+[2025-09-23 06:26:07] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:26:07] TRY OpenComPort: COM5 @ 9600 (code=0), ADR=0xFF
+[2025-09-23 06:26:09] OpenComPort -> ret=48, frmIdx=-1
+[2025-09-23 06:26:09] TRY AutoOpenComPort: ? @ 57600 (code=3), ADR=0x00
+[2025-09-23 06:26:11] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:11] TRY AutoOpenComPort: ? @ 57600 (code=3), ADR=0xFF
+[2025-09-23 06:26:14] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:14] TRY AutoOpenComPort: ? @ 115200 (code=4), ADR=0x00
+[2025-09-23 06:26:16] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:16] TRY AutoOpenComPort: ? @ 115200 (code=4), ADR=0xFF
+[2025-09-23 06:26:18] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:18] TRY AutoOpenComPort: ? @ 115200 (code=5), ADR=0x00
+[2025-09-23 06:26:20] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:20] TRY AutoOpenComPort: ? @ 115200 (code=5), ADR=0xFF
+[2025-09-23 06:26:23] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:23] TRY AutoOpenComPort: ? @ 38400 (code=2), ADR=0x00
+[2025-09-23 06:26:25] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:25] TRY AutoOpenComPort: ? @ 38400 (code=2), ADR=0xFF
+[2025-09-23 06:26:27] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:27] TRY AutoOpenComPort: ? @ 19200 (code=1), ADR=0x00
+[2025-09-23 06:26:29] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:29] TRY AutoOpenComPort: ? @ 19200 (code=1), ADR=0xFF
+[2025-09-23 06:26:32] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:32] TRY AutoOpenComPort: ? @ 9600 (code=0), ADR=0x00
+[2025-09-23 06:26:34] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
+[2025-09-23 06:26:34] TRY AutoOpenComPort: ? @ 9600 (code=0), ADR=0xFF
+[2025-09-23 06:26:36] AutoOpenComPort -> ret=48, frmIdx=-1, autoPort=-1
