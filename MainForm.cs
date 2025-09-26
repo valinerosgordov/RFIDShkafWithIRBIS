@@ -71,7 +71,7 @@ namespace LibraryTerminal
         private static readonly bool DEMO_UI = bool.TryParse(ConfigurationManager.AppSettings["UseEmulator"], out _emuUI) && _emuUI;
         private static readonly bool DEMO_KEYS = bool.TryParse(ConfigurationManager.AppSettings["DemoKeys"], out _dk) && _dk;
 
-        // >>> NEW: флаги для гибкой инициализации железа в демо
+        // флаги для гибкой инициализации железа в демо
         private static bool _forceCards;
         private static readonly bool FORCE_CARD_READERS_IN_EMU =
             bool.TryParse(ConfigurationManager.AppSettings["ForceCardReadersInEmu"], out _forceCards) && _forceCards;
@@ -100,6 +100,15 @@ namespace LibraryTerminal
         private string _lastBookTag = null;
         private string _lastRruEpc = null;
 
+        // --- GATE для книжных меток (single-shot) ---
+        private volatile bool _bookScanBusy = false;     // идёт запрос в ИРБИС
+        private DateTime _lastBookAt = DateTime.MinValue;
+        private string _lastBookKeyProcessed = null;
+
+        // антидребезг (повтор той же метки через X мс игнорируется)
+        private static int BookDebounceMs =>
+            int.TryParse(ConfigurationManager.AppSettings["BookDebounceMs"], out var v) ? v : 800;
+
         // Эмулятор UI
         private Panel _emuPanel;
 
@@ -109,6 +118,16 @@ namespace LibraryTerminal
         private Button _btnEmuBookTake;
         private Button _btnEmuBookReturn;
         private CheckBox _chkDryRun;
+
+        // ===== Новые лейблы для показа книги и MFN =====
+        private Label lblBookInfoTake;
+        private Label lblBookInfoReturn;
+
+        // ★ NEW: MFN последней найденной книги
+        private int _lastBookMfn = 0;
+
+        // alias, чтобы не ошибиться именем
+        private Screen Screen_ScanTake { get { return Screen.S3_WaitBookTake; } }
 
         private static Task OffUi(Action a) { return Task.Run(a); }
         private static Task<T> OffUi<T>(Func<T> f) { return Task.Run(f); }
@@ -187,18 +206,19 @@ namespace LibraryTerminal
             SetUiTexts();
             ShowScreen(panelMenu);
 
+            // создаём инфолейблы программно, чтобы не трогать Designer
+            InitBookInfoLabels();
+
             if (DEMO_UI) AddBackButtonForSim();
 
-            // >>> CHANGED: не выходим сразу при эмуляторе, если нужно поднять карточные ридеры
+            // в эмуляторе можно поднять только карточные ридеры
             if (USE_EMULATOR)
             {
                 InitializeEmulatorPanel();
                 if (!FORCE_CARD_READERS_IN_EMU)
                 {
-                    // эмуляторный UI без железа
                     return;
                 }
-                // иначе продолжаем инициализацию железа ниже
             }
 
             try
@@ -208,7 +228,7 @@ namespace LibraryTerminal
                 int reconnMs = int.Parse(ConfigurationManager.AppSettings["AutoReconnectMs"] ?? "1500");
                 int debounce = int.Parse(ConfigurationManager.AppSettings["DebounceMs"] ?? "250");
 
-                // --- COM: книжные ридеры + Arduino (делаем опциональными для демо)
+                // --- COM: книжные ридеры + Arduino (опционально)
                 try
                 {
                     if (ENABLE_BOOK_SCANNERS)
@@ -266,19 +286,15 @@ namespace LibraryTerminal
 
                     _rruDll = null;
 
-                    // На демо адрес = 0x00.
                     var rruDll = new Rru9816Reader(rruPort, rruBaud, 0x00);
-
                     rruDll.OnEpcHex += OnRruEpc;       // бизнес-обработка
                     rruDll.OnEpcHex += OnRruEpcDebug;  // отладка в лог
-
                     rruDll.Start();
 
                     var line = $"[RRU-DLL] Started on {(string.IsNullOrWhiteSpace(rruPort) ? "AUTO" : rruPort)} @ {rruBaud} (adr=0x00)";
                     Console.WriteLine(line);
                     Debug.WriteLine(line);
                     Logger.Append("rru.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {line}");
-                    ;
 
                     _rruDll = rruDll;
                 } catch (BadImageFormatException ex)
@@ -323,16 +339,16 @@ namespace LibraryTerminal
                 // --- PC/SC: ACR1281
                 try
                 {
-                    // >>> CHANGED: берём точное имя из конфига, иначе автопоиск
                     string preferred = ConfigurationManager.AppSettings["AcrReaderName"];
                     if (string.IsNullOrWhiteSpace(preferred))
                         preferred = FindPreferredPiccReaderName() ?? "";
 
-                    if (!string.IsNullOrWhiteSpace(preferred))
+                    if (string.IsNullOrWhiteSpace(preferred))
+                        _acr = new Acr1281PcscReader();
+                    else
                     {
                         try { _acr = new Acr1281PcscReader(preferred); } catch { _acr = new Acr1281PcscReader(); }
                     }
-                    else _acr = new Acr1281PcscReader();
 
                     _acr.OnUid += delegate (string uid) { OnAnyCardUid(uid, "ACR1281"); };
                     _acr.Start();
@@ -417,12 +433,14 @@ namespace LibraryTerminal
             if (BYPASS_CARD)
             {
                 lblReaderInfoTake.Text = "ТЕСТОВЫЙ РЕЖИМ: без карты";
-                Switch(Screen.S3_WaitBookTake, panelScanBook); // сразу к сканеру книг
+                Switch(Screen.S3_WaitBookTake, panelScanBook);
             }
             else
             {
                 Switch(Screen.S2_WaitCardTake, panelWaitCardTake);
             }
+            // очищаем инфо
+            SetBookInfo(lblBookInfoTake, "");
         }
         private void btnReturnBook_Click(object sender, EventArgs e)
         {
@@ -436,6 +454,7 @@ namespace LibraryTerminal
             {
                 Switch(Screen.S4_WaitCardReturn, panelWaitCardReturn);
             }
+            SetBookInfo(lblBookInfoReturn, "");
         }
 
         // ---------- обработка UID ----------
@@ -449,6 +468,7 @@ namespace LibraryTerminal
         {
             Logger.Append("uids.log", "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "] " + source + ": " + rawUid);
 
+
             string uid = NormalizeUid(rawUid);
 
             bool ok = await OffUi<bool>(delegate { return _svc.ValidateCard(uid); });
@@ -457,7 +477,6 @@ namespace LibraryTerminal
             string brief = await SafeGetReaderBriefAsync(_svc.LastReaderMfn);
             if (!string.IsNullOrWhiteSpace(brief))
             {
-                // >>> NEW: визуальная пометка источника
                 var src = (source ?? "").ToUpperInvariant();
                 brief = $"[{src}] {brief}";
                 lblReaderInfoTake.Text = brief;
@@ -484,44 +503,69 @@ namespace LibraryTerminal
         }
 
         // ---------- книги ----------
+
+        // ЕДИНЫЙ ШЛЮЗ: пропускает только одну метку за раз, с антидребезгом
+        private void StartBookFlowIfFree(string rawTagOrEpc, bool isReturn)
+        {
+            var bookKey = ResolveBookKey(rawTagOrEpc);
+            if (string.IsNullOrWhiteSpace(bookKey)) return;
+
+            // сразу визуально сообщим, что ищем книгу
+            if (!isReturn && (_screen == Screen.S3_WaitBookTake || _screen == Screen_ScanTake))
+                SetBookInfo(lblBookInfoTake, "Идёт поиск книги…");
+            if (isReturn && _screen == Screen.S5_WaitBookReturn)
+                SetBookInfo(lblBookInfoReturn, "Идёт поиск книги…");
+
+            // антидребезг той же метки
+            var now = DateTime.UtcNow;
+            if (_lastBookKeyProcessed == bookKey && (now - _lastBookAt).TotalMilliseconds < BookDebounceMs)
+                return;
+
+            // если уже идёт обработка — игнорируем новые события
+            if (_bookScanBusy) return;
+
+            _bookScanBusy = true;
+            _lastBookKeyProcessed = bookKey;
+            _lastBookAt = now;
+            _lastBookTag = bookKey;
+
+            var _ = (isReturn
+                ? HandleReturnAsync(bookKey)
+                : HandleTakeAsync(bookKey)
+            ).ContinueWith(__ => { _bookScanBusy = false; });
+        }
+
         private void OnBookTagTake(string tag)
         {
             if (InvokeRequired) { BeginInvoke(new Action<string>(OnBookTagTake), tag); return; }
-            var bookKey = ResolveBookKey(tag);
-            _lastBookTag = bookKey;
-            if (_screen == Screen.S3_WaitBookTake) { var _ = HandleTakeAsync(bookKey); }
+            if (_screen != Screen.S3_WaitBookTake) return;
+            StartBookFlowIfFree(tag, isReturn: false);
         }
+
         private void OnBookTagReturn(string tag)
         {
             if (InvokeRequired) { BeginInvoke(new Action<string>(OnBookTagReturn), tag); return; }
-            var bookKey = ResolveBookKey(tag);
-            _lastBookTag = bookKey;
-            if (_screen == Screen.S5_WaitBookReturn) { var _ = HandleReturnAsync(bookKey); }
+            if (_screen != Screen.S5_WaitBookReturn) return;
+            StartBookFlowIfFree(tag, isReturn: true);
         }
 
         private void OnRruEpc(string epcHex)
         {
             if (InvokeRequired) { BeginInvoke(new Action<string>(OnRruEpc), epcHex); return; }
-            var bookKey = ResolveBookKey(epcHex);
-            _lastBookTag = bookKey;
 
-            // если висим на экране "Приложите карту", но включён обход — перескакиваем к нужному экрану
+            // если включён BYPASS_CARD — переводим на нужный экран
             if (BYPASS_CARD && _screen == Screen.S2_WaitCardTake)
                 Switch(Screen.S3_WaitBookTake, panelScanBook);
             if (BYPASS_CARD && _screen == Screen.S4_WaitCardReturn)
                 Switch(Screen.S5_WaitBookReturn, panelScanBookReturn);
 
             if (_screen == Screen_ScanTake || _screen == Screen.S3_WaitBookTake)
-            {
-                var __ = HandleTakeAsync(bookKey);
-            }
+                StartBookFlowIfFree(epcHex, isReturn: false);
             else if (_screen == Screen.S5_WaitBookReturn)
-            {
-                var ____ = HandleReturnAsync(bookKey);
-            }
+                StartBookFlowIfFree(epcHex, isReturn: true);
         }
 
-        // отладка без MessageBox: пишем в Debug и в файл rru.log
+        // отладка: пишем в Debug и в файл rru.log
         private void OnRruEpcDebug(string epc)
         {
             if (IsDisposed) return;
@@ -574,7 +618,6 @@ namespace LibraryTerminal
             {
                 await EnsureIrbisConnectedAsync();
 
-                // 0) Проверяем, что читатель уже идентифицирован (если не обходим карту)
                 if (!BYPASS_CARD && (_svc == null || _svc.LastReaderMfn <= 0))
                 {
                     lblError.Text = "Сначала приложите карту читателя";
@@ -588,44 +631,51 @@ namespace LibraryTerminal
                 if (rec == null)
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: rec=null for tag={bookTag}");
+                    SetBookInfo(lblBookInfoTake, "Книга не найдена по метке.");
                     Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
                     return;
                 }
 
+                // >>> Показать MFN + краткое описание
+                await ShowBookInfoOnLabel(rec, takeMode: true);
+
+                // ★ NEW: запоминаем MFN для последующих сообщений
+                _lastBookMfn = rec.Mfn;
+
                 // 2) Диагностика значений 910^h
                 Log910Compare(rec, bookTag);
 
-                // 3) Ищем нужное повторение 910 по совпадению h (полное или по суффиксу)
+                // 3) Ищем нужное 910 по совпадению h
                 var f910 = rec.Fields.Where(f => f.Tag == "910")
                     .FirstOrDefault(f => BookTagMatches910(bookTag, f.GetFirstSubFieldText('h')));
                 if (f910 == null)
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: 910^h not matched for tag={bookTag} MFN={rec.Mfn}");
+                    SetBookInfo(lblBookInfoTake, "Эта метка не соответствует экземпляру.");
                     Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
                     return;
                 }
 
-                // 4) Проверяем статус экземпляра
+                // 4) Проверяем статус
                 string status = f910.GetFirstSubFieldText('a') ?? string.Empty;
                 bool canIssue = string.IsNullOrEmpty(status) || status == STATUS_IN_STOCK;
                 if (!canIssue)
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: already issued (a={status}) MFN={rec.Mfn}");
-                    lblNoTag.Text = "Эта книга уже выдана";
+                    SetBookInfo(lblBookInfoTake, "Эта книга уже выдана.");
                     Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
-                    lblNoTag.Text = "Метка книги не распознана. Попробуйте ещё раз";
                     return;
                 }
 
                 // 5) Dry-run?
                 if ((_chkDryRun != null && _chkDryRun.Checked) || DRY_RUN)
                 {
-                    lblSuccess.Text = "Dry-run: найдены читатель и книга (без записи в БД)";
+                    SetSuccessWithMfn("Dry-run: найдены читатель и книга (без записи в БД)", rec.Mfn);
                     Switch(Screen.S6_Success, panelSuccess, TIMEOUT_SEC_SUCCESS);
                     return;
                 }
 
-                // 6) Сначала 40 в RDR
+                // 6) Запись в RDR 40
                 bool ok40 = await OffUi(() =>
                     _svc.AppendRdr40OnIssue(
                         _svc.LastReaderMfn,
@@ -639,25 +689,23 @@ namespace LibraryTerminal
                 if (!ok40)
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: AppendRdr40 FAILED MFN(reader)={_svc.LastReaderMfn}");
-                    lblNoTag.Text = "Не удалось записать выдачу читателю";
+                    SetBookInfo(lblBookInfoTake, "Не удалось записать выдачу.");
                     Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
-                    lblNoTag.Text = "Метка книги не распознана. Попробуйте ещё раз";
                     return;
                 }
 
-                // 7) Потом меняем 910^a
+                // 7) Обновляем 910^a
                 bool okSet = await OffUi(() => _svc.UpdateBook910StatusByRfidStrict(rec, bookTag, STATUS_ISSUED, null));
                 if (!okSet)
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: Update910 to '1' FAILED MFN={rec.Mfn}");
-                    lblNoTag.Text = "Не удалось обновить статус экземпляра";
+                    SetBookInfo(lblBookInfoTake, "Не удалось обновить статус экземпляра.");
                     Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
-                    lblNoTag.Text = "Метка книги не распознана. Попробуйте ещё раз";
                     return;
                 }
 
                 await OpenBinAsync();
-                lblSuccess.Text = "Книга выдана";
+                SetSuccessWithMfn("Книга выдана", rec.Mfn);
                 Switch(Screen.S6_Success, panelSuccess, TIMEOUT_SEC_SUCCESS);
             } catch (Exception ex)
             {
@@ -678,6 +726,7 @@ namespace LibraryTerminal
                 if (rec == null)
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] RETURN: rec=null for tag={bookTag}");
+                    SetBookInfo(lblBookInfoReturn, "Книга не найдена по метке.");
                     if (USE_EMULATOR) { Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG); return; }
 
                     Switch(Screen.S7_BookRejected, panelNoTag, null);
@@ -686,6 +735,12 @@ namespace LibraryTerminal
                     hop.Start();
                     return;
                 }
+
+                // >>> Показать MFN + краткое описание
+                await ShowBookInfoOnLabel(rec, takeMode: false);
+
+                // ★ NEW: запоминаем MFN
+                _lastBookMfn = rec.Mfn;
 
                 Log910Compare(rec, bookTag);
 
@@ -699,12 +754,12 @@ namespace LibraryTerminal
 
                 if ((_chkDryRun != null && _chkDryRun.Checked) || DRY_RUN)
                 {
-                    lblSuccess.Text = "Dry-run: книга найдена (возврат без записи в БД)";
+                    SetSuccessWithMfn("Dry-run: книга найдена (возврат без записи в БД)", rec.Mfn);
                     Switch(Screen.S6_Success, panelSuccess, TIMEOUT_SEC_SUCCESS);
                     return;
                 }
 
-                // Сначала закрываем 40 у читателя
+                // Закрываем 40
                 bool ok40 = await OffUi(() =>
                     _svc.CompleteRdr40OnReturn(
                         bookTag,
@@ -715,25 +770,23 @@ namespace LibraryTerminal
                 if (!ok40)
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] RETURN: CompleteRdr40 FAILED");
-                    lblNoTag.Text = "Не удалось закрыть выдачу у читателя";
+                    SetBookInfo(lblBookInfoReturn, "Не удалось закрыть выдачу у читателя.");
                     Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
-                    lblNoTag.Text = "Метка книги не распознана. Попробуйте ещё раз";
                     return;
                 }
 
-                // Затем 910^a = 0
+                // 910^a = 0
                 bool okSet = await OffUi(() => _svc.UpdateBook910StatusByRfidStrict(rec, bookTag, STATUS_IN_STOCK, null));
                 if (!okSet)
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] RETURN: Update910 to '0' FAILED MFN={rec.Mfn}");
-                    lblNoTag.Text = "Не удалось обновить статус экземпляра";
+                    SetBookInfo(lblBookInfoReturn, "Не удалось обновить статус экземпляра.");
                     Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
-                    lblNoTag.Text = "Метка книги не распознана. Попробуйте ещё раз";
                     return;
                 }
 
                 await OpenBinAsync();
-                lblSuccess.Text = "Книга принята";
+                SetSuccessWithMfn("Книга принята", rec.Mfn);
                 Switch(Screen.S6_Success, panelSuccess, TIMEOUT_SEC_SUCCESS);
             } catch (Exception ex)
             {
@@ -756,7 +809,7 @@ namespace LibraryTerminal
                 var rec = await OffUi<ManagedClient.IrbisRecord>(delegate { return _svc.FindOneByBookRfid(tag); });
                 if (rec == null) { await HandleReturnAsync(tag); return; }
 
-                // Диагностика и выбор 910 с терпимым сравнением
+                // Диагностика и выбор 910
                 Log910Compare(rec, tag);
                 var f910 = rec.Fields
                     .Where(f => f.Tag == "910")
@@ -1024,7 +1077,7 @@ namespace LibraryTerminal
                     brief = title + "\nШифр: " + shifr + "\nИнвентарные №: " + invs;
                 }
 
-                MessageBox.Show(this, brief.Trim(), "Книга", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, ("[MFN " + rec.Mfn + "] " + brief.Trim()), "Книга", MessageBoxButtons.OK, MessageBoxIcon.Information);
             } catch (Exception ex)
             {
                 MessageBox.Show(this, "Ошибка проверки книги: " + ex.Message, "Проверка книги", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1063,7 +1116,6 @@ namespace LibraryTerminal
             if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s.Substring(2);
             return s.ToUpperInvariant();
         }
-        // Сравнение ключа скана с 910^h: полное совпадение или суффикс
         private static bool BookTagMatches910(string scanned, string hFromRecord)
         {
             var key = IrbisServiceManaged_Normalize(scanned);
@@ -1075,7 +1127,6 @@ namespace LibraryTerminal
             return false;
         }
 
-        // Временный лог: что реально сравниваем с 910^h
         private static void Log910Compare(ManagedClient.IrbisRecord rec, string scanned)
         {
             try
@@ -1093,7 +1144,80 @@ namespace LibraryTerminal
             } catch { }
         }
 
-        // небольшой alias, чтобы не ошибиться именем
-        private Screen Screen_ScanTake { get { return Screen.S3_WaitBookTake; } }
+        // ====== ВСПОМОГАТЕЛЬНОЕ ДЛЯ ЛЕЙБЛОВ КНИГИ ======
+        private void InitBookInfoLabels()
+        {
+            // создаём лейбл для экрана выдачи
+            lblBookInfoTake = new Label
+            {
+                AutoSize = false,
+                Width = panelScanBook.Width - 40,
+                Height = 48,
+                Left = 20,
+                Top = panelScanBook.Height - 60,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+            };
+            panelScanBook.Controls.Add(lblBookInfoTake);
+
+            // лейбл для экрана возврата
+            lblBookInfoReturn = new Label
+            {
+                AutoSize = false,
+                Width = panelScanBookReturn.Width - 40,
+                Height = 48,
+                Left = 20,
+                Top = panelScanBookReturn.Height - 60,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+            };
+            panelScanBookReturn.Controls.Add(lblBookInfoReturn);
+
+            SetBookInfo(lblBookInfoTake, "");
+            SetBookInfo(lblBookInfoReturn, "");
+        }
+
+        private void SetBookInfo(Label lbl, string text)
+        {
+            try { if (lbl != null) lbl.Text = text ?? ""; } catch { }
+        }
+
+        private async Task ShowBookInfoOnLabel(ManagedClient.IrbisRecord rec, bool takeMode)
+        {
+            try
+            {
+                string brief = await SafeGetBookBriefAsync(rec.Mfn);
+                if (string.IsNullOrWhiteSpace(brief))
+                {
+                    var title = rec.FM("200", 'a') ?? "(без заглавия)";
+                    var shifr = rec.FM("903");
+                    var invs = string.Join(", ", rec.FMA("910", 'b') ?? new string[0]);
+                    brief = title + "\nШифр: " + shifr + "\nИнвентарные №: " + invs;
+                }
+                var oneLine = brief.Replace("\r", " ").Replace("\n", " ").Trim();
+                var info = $"[MFN {rec.Mfn}] {oneLine}";
+
+                if (takeMode) SetBookInfo(lblBookInfoTake, info);
+                else SetBookInfo(lblBookInfoReturn, info);
+
+                Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {(takeMode ? "TAKE" : "RETURN")}: {info}");
+            } catch
+            {
+                if (takeMode) SetBookInfo(lblBookInfoTake, $"[MFN {rec.Mfn}]");
+                else SetBookInfo(lblBookInfoReturn, $"[MFN {rec.Mfn}]");
+            }
+        }
+
+        // ★ NEW: общий хелпер для текста успеха с MFN
+        private void SetSuccessWithMfn(string action, int mfn)
+        {
+            try
+            {
+                lblSuccess.Text = $"{action}\r\nMFN книги: {mfn}";
+            } catch
+            {
+                lblSuccess.Text = $"{action} (MFN {mfn})";
+            }
+        }
     }
 }
