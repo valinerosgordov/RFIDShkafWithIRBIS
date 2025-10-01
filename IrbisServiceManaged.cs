@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -72,7 +74,7 @@ namespace LibraryTerminal
             CurrentLogin = _client.Username;
             if (string.IsNullOrEmpty(_currentDb)) _currentDb = _client.Database;
         }
-        
+
         private static string ExplainConn(string cs)
         {
             string host = "?", db = "?", user = "?"; int port = 0;
@@ -106,6 +108,70 @@ namespace LibraryTerminal
             return s.ToUpperInvariant();
         }
 
+        // --- генератор вариантов UID (HEX, разделители, реверс, DEC и DEC с нулями)
+        private static IEnumerable<string> MakeUidVariants(string uid)
+        {
+            var baseHex = NormalizeId(uid) ?? "";
+            var hexOnly = new string(baseHex.Where(Uri.IsHexDigit).Select(char.ToUpperInvariant).ToArray());
+            if (hexOnly.Length == 0)
+            {
+                if (!string.IsNullOrWhiteSpace(baseHex)) yield return baseHex;
+                yield break;
+            }
+
+            // базовые HEX-варианты
+            yield return hexOnly;                        // ABCDEF12
+            yield return InsertEvery2(hexOnly, ":");     // AB:CD:EF:12
+            yield return InsertEvery2(hexOnly, "-");     // AB-CD-EF-12
+
+            // реверс по байтам
+            var revHex = ReverseByByte(hexOnly);
+            if (!string.Equals(revHex, hexOnly, StringComparison.Ordinal))
+            {
+                yield return revHex;
+                yield return InsertEvery2(revHex, ":");
+                yield return InsertEvery2(revHex, "-");
+            }
+
+            // десятичные представления (часто EM-Marine хранят в DEC)
+            if (ulong.TryParse(hexOnly, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var valHex))
+            {
+                var dec = valHex.ToString(CultureInfo.InvariantCulture);
+                yield return dec;                         // без ведущих нулей
+                if (dec.Length < 10) yield return dec.PadLeft(10, '0'); // частая длина
+
+                // для реверса
+                if (ulong.TryParse(revHex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var valRev))
+                {
+                    var decRev = valRev.ToString(CultureInfo.InvariantCulture);
+                    yield return decRev;
+                    if (decRev.Length < 10) yield return decRev.PadLeft(10, '0');
+                }
+            }
+        }
+        private static string InsertEvery2(string hex, string sep)
+        {
+            var sb = new StringBuilder(hex.Length + hex.Length / 2);
+            for (int i = 0; i < hex.Length; i += 2)
+            {
+                if (i > 0) sb.Append(sep);
+                int len = Math.Min(2, hex.Length - i);
+                sb.Append(hex, i, len);
+            }
+            return sb.ToString();
+        }
+        private static string ReverseByByte(string hex)
+        {
+            var sb = new StringBuilder(hex.Length);
+            for (int i = hex.Length; i > 0; i -= 2)
+            {
+                int start = Math.Max(0, i - 2);
+                int len = Math.Min(2, i - start);
+                sb.Append(hex, start, len);
+            }
+            return sb.ToString();
+        }
+
         // === Вспомогательные ===
         private string GetMaskMrg()
         {
@@ -130,8 +196,8 @@ namespace LibraryTerminal
         private MarcRecord FindOne(string expression)
         {
             EnsureConnected();
-            LogIrbis("SEARCH DB=" + _client.Database + " EXPR=" + expression);
             var records = _client.SearchRead(expression);
+            LogIrbis($"SEARCH DB={_client.Database} EXPR={expression} -> found={(records?.Length ?? 0)}");
             return (records != null && records.Length > 0) ? records[0] : null;
         }
 
@@ -187,74 +253,95 @@ namespace LibraryTerminal
         {
             if (string.IsNullOrWhiteSpace(uid)) return false;
 
-            uid = NormalizeId(uid);
-
             string rdrDb = ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
             UseDatabase(rdrDb);
 
-            string listRaw = ConfigurationManager.AppSettings["ExprReaderByUidList"];
+            // собираем шаблоны
+            var patterns = new List<string>();
+            var listRaw = ConfigurationManager.AppSettings["ExprReaderByUidList"];
             if (!string.IsNullOrWhiteSpace(listRaw))
+                patterns.AddRange(listRaw.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()));
+
+            var single = ConfigurationManager.AppSettings["ExprReaderByUid"];
+            if (!string.IsNullOrWhiteSpace(single))
+                patterns.Add(single.Trim());
+
+            if (patterns.Count == 0)
+                patterns.Add("\"RI={0}\""); // дефолт
+
+            foreach (var uidVariant in MakeUidVariants(uid))
             {
-                var patterns = listRaw.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim());
                 foreach (var pat in patterns)
                 {
-                    string expr = string.Format(pat, uid);
+                    var expr = string.Format(pat, uidVariant);
+                    LogIrbis($"CARD TRY DB={rdrDb} PAT={pat} UID={uidVariant}");
                     var rec = FindOne(expr);
-                    if (rec != null) { LastReaderMfn = rec.Mfn; return true; }
+                    if (rec != null)
+                    {
+                        LastReaderMfn = rec.Mfn;
+                        LogIrbis($"CARD OK: MFN={LastReaderMfn} via PAT={pat} UID={uidVariant}");
+                        return true;
+                    }
                 }
-                return false;
             }
 
-            string fmt = ConfigurationManager.AppSettings["ExprReaderByUid"] ?? "\"RI={0}\"";
-            var recSingle = FindOne(string.Format(fmt, uid));
-            if (recSingle != null) { LastReaderMfn = recSingle.Mfn; return true; }
-
+            LogIrbis("CARD NOT FOUND for UID=" + uid);
             return false;
         }
 
         /// <summary>
         /// Поиск книги по RFID-метке (910^h) в IBIS.
-        /// По умолчанию используем IN= (рекомендация разработчика), но пробуем и H/HI/HIN/RF/RFID.
+        /// Теперь пробуем полный EPC-96 и «хвосты» (последние 16 и 8 hex).
         /// </summary>
         public MarcRecord FindOneByBookRfid(string rfid)
         {
             rfid = NormalizeId(rfid);
             if (string.IsNullOrWhiteSpace(rfid)) return null;
 
+            // оставляем HEX, режем до 24 (EPC-96)
             rfid = new string(rfid.Where(Uri.IsHexDigit).Select(char.ToUpperInvariant).ToArray());
             if (rfid.Length < 8) { LogIrbis("BAD RFID KEY: " + rfid); return null; }
             if (rfid.Length > 24) rfid = rfid.Substring(0, 24);
 
+            // варианты ключа: полный, хвост-16 (8 байт), хвост-8 (4 байта)
+            var keyVariants = new List<string> { rfid };
+            if (rfid.Length >= 16) keyVariants.Add(rfid.Substring(rfid.Length - 16));
+            if (rfid.Length >= 8) keyVariants.Add(rfid.Substring(rfid.Length - 8));
+
             string booksDb = ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS";
 
-            // 0) если задано в конфиге — пробуем это первым
-            var tryList = new System.Collections.Generic.List<string>();
-            var cfg = ConfigurationManager.AppSettings["ExprBookByRfid"];
-            if (!string.IsNullOrWhiteSpace(cfg)) tryList.Add(cfg);
+            // шаблоны поиска (первым — из конфига, если задан)
+            var patterns = new List<string>();
+            var cfgPat = ConfigurationManager.AppSettings["ExprBookByRfid"];
+            if (!string.IsNullOrWhiteSpace(cfgPat)) patterns.Add(cfgPat);
 
-            // 1) типовые варианты индекса на 910^h
-            tryList.AddRange(new[] {
-                "\"IN={0}\"",     // IBIS: поиск книги по метке (рекоменд.)
+            // типовые индексы на RFID/910^h
+            patterns.AddRange(new[] {
                 "\"H={0}\"",
                 "\"HI={0}\"",
                 "\"HIN={0}\"",
                 "\"RF={0}\"",
-                "\"RFID={0}\""
+                "\"RFID={0}\"",
+                "\"IN={0}\""
             });
 
             MarcRecord found = null;
-            foreach (var pat in tryList)
+            foreach (var v in keyVariants)
             {
-                var expr = string.Format(pat, rfid);
-                try
+                foreach (var pat in patterns)
                 {
-                    var rec = WithDatabase(booksDb, delegate { return FindOne(expr); });
-                    LogIrbis("TRY DB=" + booksDb + " EXPR=" + expr + " -> " + (rec != null ? ("MFN " + rec.Mfn) : "NULL"));
-                    if (rec != null) { found = rec; break; }
-                } catch (Exception ex)
-                {
-                    LogIrbis("SEARCH FAIL EXPR=" + expr + " ERR=" + ex.Message);
+                    var expr = string.Format(pat, v);
+                    try
+                    {
+                        var rec = WithDatabase(booksDb, () => FindOne(expr));
+                        LogIrbis($"TRY DB={booksDb} EXPR={expr} -> {(rec != null ? ("MFN " + rec.Mfn) : "NULL")}");
+                        if (rec != null) { found = rec; break; }
+                    } catch (Exception ex)
+                    {
+                        LogIrbis("SEARCH FAIL EXPR=" + expr + " ERR=" + ex.Message);
+                    }
                 }
+                if (found != null) break;
             }
 
             if (found == null)

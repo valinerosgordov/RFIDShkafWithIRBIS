@@ -123,8 +123,9 @@ namespace LibraryTerminal
         private Label lblBookInfoTake;
         private Label lblBookInfoReturn;
 
-        // ★ NEW: MFN последней найденной книги
+        // ★ NEW: MFN и brief последней найденной книги
         private int _lastBookMfn = 0;
+        private string _lastBookBrief = "";
 
         // alias, чтобы не ошибиться именем
         private Screen Screen_ScanTake { get { return Screen.S3_WaitBookTake; } }
@@ -322,7 +323,7 @@ namespace LibraryTerminal
                 try
                 {
                     string iqPort = PortResolver.Resolve(ConfigurationManager.AppSettings["IqrfidPort"]);
-                    int iqBaud = int.Parse(ConfigurationManager.AppSettings["BaudIqrfid"] ?? "9600");
+                    int iqBaud = int.Parse(ConfigurationManager.AppSettings["BaudIqrfid"] ?? "57600");
                     string iqNL = ConfigurationManager.AppSettings["NewLineIqrfid"] ?? "\r\n";
 
                     if (!string.IsNullOrWhiteSpace(iqPort))
@@ -430,6 +431,7 @@ namespace LibraryTerminal
         private void btnTakeBook_Click(object sender, EventArgs e)
         {
             _mode = Mode.Take;
+            _lastBookBrief = "";
             if (BYPASS_CARD)
             {
                 lblReaderInfoTake.Text = "ТЕСТОВЫЙ РЕЖИМ: без карты";
@@ -445,6 +447,7 @@ namespace LibraryTerminal
         private void btnReturnBook_Click(object sender, EventArgs e)
         {
             _mode = Mode.Return;
+            _lastBookBrief = "";
             if (BYPASS_CARD)
             {
                 lblReaderInfoReturn.Text = "ТЕСТОВЫЙ РЕЖИМ: без карты";
@@ -466,7 +469,7 @@ namespace LibraryTerminal
 
         private async Task OnAnyCardUidAsync(string rawUid, string source)
         {
-            Logger.Append("uids.log", "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "] " + source + ": " + rawUid);
+            Logger.Append("uids.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {source}: {rawUid}");
 
 
             string uid = NormalizeUid(rawUid);
@@ -486,6 +489,14 @@ namespace LibraryTerminal
             {
                 lblReaderInfoTake.Text = "Читатель идентифицирован (MFN: " + _svc.LastReaderMfn + ")";
                 lblReaderInfoReturn.Text = lblReaderInfoTake.Text;
+            }
+
+            // если были на меню — сразу на экран сканирования книги (выдача)
+            if (_screen == Screen.S1_Menu)
+            {
+                _mode = Mode.Take;
+                Switch(Screen.S3_WaitBookTake, panelScanBook);
+                return;
             }
 
             if (_screen == Screen.S2_WaitCardTake) Switch(Screen.S3_WaitBookTake, panelScanBook);
@@ -884,7 +895,22 @@ namespace LibraryTerminal
                     brief = brief.Replace("\r", "").Replace("\n", " ");
                     MessageBox.Show(this, "OK: " + brief, "Проверка карты", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     lblReaderInfoTake.Text = brief; lblReaderInfoReturn.Text = brief;
-                    if (_screen == Screen.S2_WaitCardTake || _screen == Screen.S4_WaitCardReturn) { await OnAnyCardUidAsync(uid, "EMU"); }
+
+                    // если мы ждали карту — используем штатную обработку
+                    if (_screen == Screen.S2_WaitCardTake || _screen == Screen.S4_WaitCardReturn)
+                    {
+                        await OnAnyCardUidAsync(uid, "EMU");
+                        return;
+                    }
+
+                    // если на главном меню — сразу переходим к скану книги (выдача)
+                    if (_screen == Screen.S1_Menu)
+                    {
+                        _mode = Mode.Take;
+                        Switch(Screen.S3_WaitBookTake, panelScanBook);
+                        return;
+                    }
+
                 } catch (Exception ex) { MessageBox.Show(this, "Ошибка проверки карты: " + ex.Message, "Проверка карты", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             };
 
@@ -929,8 +955,7 @@ namespace LibraryTerminal
 
         private static void DiagLog(string msg)
         {
-            Logger.Append("pcsc_diag.log",
-                "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "] " + msg);
+            Logger.Append("pcsc_diag.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}");
         }
 
         private async Task DebugProbeAllReaders()
@@ -1197,23 +1222,30 @@ namespace LibraryTerminal
                 var oneLine = brief.Replace("\r", " ").Replace("\n", " ").Trim();
                 var info = $"[MFN {rec.Mfn}] {oneLine}";
 
+                // запомним краткое описание для экрана успеха
+                _lastBookBrief = oneLine;
+
                 if (takeMode) SetBookInfo(lblBookInfoTake, info);
                 else SetBookInfo(lblBookInfoReturn, info);
 
                 Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {(takeMode ? "TAKE" : "RETURN")}: {info}");
             } catch
             {
+                _lastBookBrief = "";
                 if (takeMode) SetBookInfo(lblBookInfoTake, $"[MFN {rec.Mfn}]");
                 else SetBookInfo(lblBookInfoReturn, $"[MFN {rec.Mfn}]");
             }
         }
 
-        // ★ NEW: общий хелпер для текста успеха с MFN
+        // ★ NEW: общий хелпер для текста успеха с MFN и кратким описанием
         private void SetSuccessWithMfn(string action, int mfn)
         {
             try
             {
-                lblSuccess.Text = $"{action}\r\nMFN книги: {mfn}";
+                if (!string.IsNullOrWhiteSpace(_lastBookBrief))
+                    lblSuccess.Text = $"{action}\r\nMFN книги: {mfn}\r\n{_lastBookBrief}";
+                else
+                    lblSuccess.Text = $"{action}\r\nMFN книги: {mfn}";
             } catch
             {
                 lblSuccess.Text = $"{action} (MFN {mfn})";

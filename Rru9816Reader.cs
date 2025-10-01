@@ -18,7 +18,7 @@ namespace LibraryTerminal
         private Thread _thread;
 
         private int _frmIdx = -1;
-        private int _openedPortNum = 5;    // COM5
+        private int _openedPortNum = 2;    // COM5
         private byte _adrInUse = 0x00; // 0x00/0xFF
         private byte _baudCode = 3;    // 0:9600 1:19200 2:38400 3:57600 4/5:115200
 
