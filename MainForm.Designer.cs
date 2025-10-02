@@ -48,11 +48,7 @@ namespace LibraryTerminal
             this.lblReaderInfoTake = new System.Windows.Forms.Label();
             this.lblReaderInfoReturn = new System.Windows.Forms.Label();
 
-            // --------- поля под демо-кнопки (не используются дизайнером) ---------
-            this.btnSimCardTake = new System.Windows.Forms.Button();
-            this.btnSimCardReturn = new System.Windows.Forms.Button();
-            this.btnSimBookTake = new System.Windows.Forms.Button();
-            this.btnSimBookReturn = new System.Windows.Forms.Button();
+     
 
             this.SuspendLayout();
 
@@ -61,7 +57,7 @@ namespace LibraryTerminal
             this.ClientSize = new System.Drawing.Size(800, 600);
             this.Name = "MainForm";
             this.Text = "Library Terminal";
-            this.KeyPreview = true;
+            this.KeyPreview = false;
             this.Load += new System.EventHandler(this.MainForm_Load);
 
             // ========= Панель меню =========
@@ -262,10 +258,5 @@ namespace LibraryTerminal
         private Label lblReaderInfoTake;
         private Label lblReaderInfoReturn;
 
-        // поля под демо-кнопки (создаются программно)
-        private Button btnSimCardTake;
-        private Button btnSimCardReturn;
-        private Button btnSimBookTake;
-        private Button btnSimBookReturn;
     }
 }

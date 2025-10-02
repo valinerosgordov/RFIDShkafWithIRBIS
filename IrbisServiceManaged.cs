@@ -290,6 +290,72 @@ namespace LibraryTerminal
         }
 
         /// <summary>
+        /// NEW: Проверка читателя по номеру читательского билета. True — найден.
+        /// Использует шаблоны из App.config:
+        ///   ExprReaderByTicketList = "R={0}";"TKT={0}";...  (через ; )
+        ///   ExprReaderByTicket     = "R={0}"
+        /// Если не задано — дефолт "\"R={0}\"".
+        /// Поддержка цифровых номеров с ведущими нулями (попытки PadLeft до 10 и 8).
+        /// </summary>
+        public bool ValidateReaderByTicketNumber(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return false;
+
+            // если похоже на UID/HEX — сразу пробуем карточный путь
+            var raw = value.Trim();
+            var hexOnly = new string(raw.Where(Uri.IsHexDigit).Select(char.ToUpperInvariant).ToArray());
+            if (hexOnly.Length >= 8 && hexOnly.Length <= 32 && hexOnly.All(Uri.IsHexDigit))
+            {
+                LogIrbis($"TICKET looks like UID HEX -> fallback to ValidateCard(), val={raw}");
+                return ValidateCard(hexOnly); // это выставит LastReaderMfn
+            }
+
+            string rdrDb = ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
+            UseDatabase(rdrDb);
+
+            // Список шаблонов из конфига (гибко меняется без кода)
+            // Примеры:  "R={0}"; "RR={0}"; "\"BAR={0}\""; "\"TICKET={0}\""
+            var patterns = new List<string>();
+            var listRaw = ConfigurationManager.AppSettings["ExprReaderByTicketList"];
+            if (!string.IsNullOrWhiteSpace(listRaw))
+                patterns.AddRange(listRaw.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()));
+
+            var single = ConfigurationManager.AppSettings["ExprReaderByTicket"];
+            if (!string.IsNullOrWhiteSpace(single))
+                patterns.Add(single.Trim());
+
+            // дефолт — как у тебя в логах
+            if (patterns.Count == 0) patterns.Add("\"R={0}\"");
+
+            // Нормализации: как есть; только цифры; с обрезкой пробелов/нули слева
+            var candidates = new List<string>();
+            var digitsOnly = new string(raw.Where(char.IsDigit).ToArray());
+            candidates.Add(raw);
+            if (!string.IsNullOrEmpty(digitsOnly) && digitsOnly != raw) candidates.Add(digitsOnly);
+            if (digitsOnly.StartsWith("0") && digitsOnly.Length > 1) candidates.Add(digitsOnly.TrimStart('0'));
+
+            foreach (var val in candidates.Distinct())
+            {
+                foreach (var pat in patterns)
+                {
+                    var expr = string.Format(pat, val);
+                    LogIrbis($"TICKET TRY DB={rdrDb} PAT={pat} VAL={val}");
+                    var rec = FindOne(expr);
+                    if (rec != null)
+                    {
+                        LastReaderMfn = rec.Mfn;
+                        LogIrbis($"TICKET OK MFN={LastReaderMfn} via PAT={pat} VAL={val}");
+                        return true;
+                    }
+                }
+            }
+
+            LogIrbis("TICKET NOT FOUND for value=" + raw);
+            return false;
+        }
+
+
+        /// <summary>
         /// Поиск книги по RFID-метке (910^h) в IBIS.
         /// Теперь пробуем полный EPC-96 и «хвосты» (последние 16 и 8 hex).
         /// </summary>
