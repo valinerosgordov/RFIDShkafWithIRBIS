@@ -44,11 +44,9 @@ namespace LibraryTerminal
             this.lblNoTag = new System.Windows.Forms.Label();
             this.lblError = new System.Windows.Forms.Label();
 
-            // --------- НОВОЕ: инфо о читателе ---------
+            // --------- Инфо о читателе на экранах сканирования книги ---------
             this.lblReaderInfoTake = new System.Windows.Forms.Label();
             this.lblReaderInfoReturn = new System.Windows.Forms.Label();
-
-     
 
             this.SuspendLayout();
 
@@ -58,18 +56,20 @@ namespace LibraryTerminal
             this.Name = "MainForm";
             this.Text = "Library Terminal";
             this.KeyPreview = false;
+            this.DoubleBuffered = true; // меньше мерцаний
             this.Load += new System.EventHandler(this.MainForm_Load);
 
             // ========= Панель меню =========
             this.panelMenu.Location = new Point(0, 0);
             this.panelMenu.Size = new Size(800, 600);
+            this.panelMenu.Dock = DockStyle.Fill;
             this.panelMenu.BackColor = Color.White;
 
             // Заголовок
             this.lblTitleMenu.AutoSize = false;
             this.lblTitleMenu.TextAlign = ContentAlignment.MiddleCenter;
             this.lblTitleMenu.Font = new Font("Segoe UI", 22F, FontStyle.Bold);
-            this.lblTitleMenu.Text = "Библиотека\nФилиал №1";
+            this.lblTitleMenu.Text = "Библиотека\r\nФилиал №1";
             this.lblTitleMenu.Dock = DockStyle.Top;
             this.lblTitleMenu.Height = 160;
 
@@ -96,6 +96,7 @@ namespace LibraryTerminal
             // S2 — Ожидание карты (выдача)
             this.panelWaitCardTake.Location = new Point(0, 0);
             this.panelWaitCardTake.Size = new Size(800, 600);
+            this.panelWaitCardTake.Dock = DockStyle.Fill;
             SetupBigLabel(this.lblWaitCardTake, "Приложите карту читателя для выдачи");
             this.panelWaitCardTake.Controls.Add(this.lblWaitCardTake);
             AddMarqueeTo(this.panelWaitCardTake);
@@ -103,6 +104,7 @@ namespace LibraryTerminal
             // S4 — Ожидание карты (возврат)
             this.panelWaitCardReturn.Location = new Point(0, 0);
             this.panelWaitCardReturn.Size = new Size(800, 600);
+            this.panelWaitCardReturn.Dock = DockStyle.Fill;
             SetupBigLabel(this.lblWaitCardReturn, "Приложите карту читателя для возврата");
             this.panelWaitCardReturn.Controls.Add(this.lblWaitCardReturn);
             AddMarqueeTo(this.panelWaitCardReturn);
@@ -110,15 +112,17 @@ namespace LibraryTerminal
             // ====== S3 — Ожидание книги (выдача) ======
             this.panelScanBook.Location = new Point(0, 0);
             this.panelScanBook.Size = new Size(800, 600);
+            this.panelScanBook.Dock = DockStyle.Fill;
 
-            // линия с brief
+            // строка с ФИО (выдача)
             this.lblReaderInfoTake.AutoSize = false;
             this.lblReaderInfoTake.Dock = DockStyle.Top;
             this.lblReaderInfoTake.Height = 72;
             this.lblReaderInfoTake.TextAlign = ContentAlignment.MiddleCenter;
             this.lblReaderInfoTake.Font = new Font("Segoe UI", 14F, FontStyle.Regular);
             this.lblReaderInfoTake.ForeColor = Color.FromArgb(45, 45, 45);
-            this.lblReaderInfoTake.Text = "";
+            this.lblReaderInfoTake.Text = "";             // имя читателя установит код
+            this.lblReaderInfoTake.Visible = false;       // скрыто до идентификации
 
             // основной текст
             SetupBigLabel(this.lblScanBook, "Поднесите книгу к считывателю");
@@ -126,10 +130,12 @@ namespace LibraryTerminal
             this.panelScanBook.Controls.Add(this.lblScanBook);
             this.panelScanBook.Controls.Add(this.lblReaderInfoTake);
             AddMarqueeTo(this.panelScanBook);
+            this.lblReaderInfoTake.BringToFront();
 
             // ====== S5 — Ожидание книги (возврат) ======
             this.panelScanBookReturn.Location = new Point(0, 0);
             this.panelScanBookReturn.Size = new Size(800, 600);
+            this.panelScanBookReturn.Dock = DockStyle.Fill;
 
             this.lblReaderInfoReturn.AutoSize = false;
             this.lblReaderInfoReturn.Dock = DockStyle.Top;
@@ -138,34 +144,40 @@ namespace LibraryTerminal
             this.lblReaderInfoReturn.Font = new Font("Segoe UI", 14F, FontStyle.Regular);
             this.lblReaderInfoReturn.ForeColor = Color.FromArgb(45, 45, 45);
             this.lblReaderInfoReturn.Text = "";
+            this.lblReaderInfoReturn.Visible = false;     // скрыто до идентификации
 
             SetupBigLabel(this.lblScanBookReturn, "Поднесите возвращаемую книгу к считывателю");
 
             this.panelScanBookReturn.Controls.Add(this.lblScanBookReturn);
             this.panelScanBookReturn.Controls.Add(this.lblReaderInfoReturn);
             AddMarqueeTo(this.panelScanBookReturn);
+            this.lblReaderInfoReturn.BringToFront();
 
             // S6 — Успех
             this.panelSuccess.Location = new Point(0, 0);
             this.panelSuccess.Size = new Size(800, 600);
-            SetupBigLabel(this.lblSuccess, "Спасибо!\nОперация выполнена");
+            this.panelSuccess.Dock = DockStyle.Fill;
+            SetupBigLabel(this.lblSuccess, "Спасибо!\r\nОперация выполнена");
             this.panelSuccess.Controls.Add(this.lblSuccess);
 
             // S9 — Нет места
             this.panelOverflow.Location = new Point(0, 0);
             this.panelOverflow.Size = new Size(800, 600);
-            SetupBigLabel(this.lblOverflow, "Нет места\nОбратитесь, пожалуйста, в библиотеку");
+            this.panelOverflow.Dock = DockStyle.Fill;
+            SetupBigLabel(this.lblOverflow, "Нет места\r\nОбратитесь, пожалуйста, в библиотеку");
             this.panelOverflow.Controls.Add(this.lblOverflow);
 
             // S7 — Книга не принята
             this.panelNoTag.Location = new Point(0, 0);
             this.panelNoTag.Size = new Size(800, 600);
-            SetupBigLabel(this.lblNoTag, "Книга не принята\nЗаберите книгу и обратитесь в библиотеку");
+            this.panelNoTag.Dock = DockStyle.Fill;
+            SetupBigLabel(this.lblNoTag, "Книга не принята\r\nЗаберите книгу и обратитесь в библиотеку");
             this.panelNoTag.Controls.Add(this.lblNoTag);
 
             // S8 — Ошибка карты/авторизации
             this.panelError.Location = new Point(0, 0);
             this.panelError.Size = new Size(800, 600);
+            this.panelError.Dock = DockStyle.Fill;
             this.lblError.AutoSize = false;
             this.lblError.Dock = DockStyle.Fill;
             this.lblError.TextAlign = ContentAlignment.MiddleCenter;
@@ -196,15 +208,6 @@ namespace LibraryTerminal
             this.panelNoTag.Visible = false;
 
             this.ResumeLayout(false);
-
-            // Кнопка «Тест ИРБИС» на панели меню
-            var btnTestIrbis = new System.Windows.Forms.Button();
-            btnTestIrbis.Size = new System.Drawing.Size(200, 44);
-            btnTestIrbis.Location = new System.Drawing.Point((800 - 200) / 2, 410);
-            btnTestIrbis.Text = "Тест ИРБИС (F9)";
-            btnTestIrbis.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular);
-            btnTestIrbis.Click += this.TestIrbisConnection;
-            this.panelMenu.Controls.Add(btnTestIrbis);
         }
 
         // Хелперы для оформления экранов
@@ -254,9 +257,8 @@ namespace LibraryTerminal
         private Label lblNoTag;
         private Label lblError;
 
-        // НОВОЕ: инфоблок о читателе
+        // Инфо-строка о читателе (устанавливается из кода: ФИО/brief)
         private Label lblReaderInfoTake;
         private Label lblReaderInfoReturn;
-
     }
 }

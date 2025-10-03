@@ -21,6 +21,12 @@ namespace LibraryTerminal
         public string CurrentLogin { get; private set; }
         public int LastReaderMfn { get; private set; }
 
+        // ★ Удобные свойства конфигурации
+        private string BooksDb => ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS";
+        private string ReadersDb => ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
+        private string BookBriefFormat => ConfigurationManager.AppSettings["BookBriefFormat"] ?? "@brief";
+        public string ConnectionString => _lastConnectionString;
+
         // === Подключение ===
         public void Connect()
         {
@@ -133,14 +139,13 @@ namespace LibraryTerminal
                 yield return InsertEvery2(revHex, "-");
             }
 
-            // десятичные представления (часто EM-Marine хранят в DEC)
+            // десятичные представления
             if (ulong.TryParse(hexOnly, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var valHex))
             {
                 var dec = valHex.ToString(CultureInfo.InvariantCulture);
-                yield return dec;                         // без ведущих нулей
-                if (dec.Length < 10) yield return dec.PadLeft(10, '0'); // частая длина
+                yield return dec;
+                if (dec.Length < 10) yield return dec.PadLeft(10, '0');
 
-                // для реверса
                 if (ulong.TryParse(revHex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var valRev))
                 {
                     var decRev = valRev.ToString(CultureInfo.InvariantCulture);
@@ -183,7 +188,6 @@ namespace LibraryTerminal
             } catch { return "09"; }
         }
 
-        // Пишем в Logs через общий Logger
         private static void LogIrbis(string msg)
         {
             try
@@ -207,11 +211,19 @@ namespace LibraryTerminal
             return _client.ReadRecord(mfn);
         }
 
+        // ★ безопасная запись с логом ошибки
         private bool WriteRecordSafe(MarcRecord record)
         {
-            EnsureConnected();
-            _client.WriteRecord(record, /*needLock*/ false, /*ifUpdate*/ true);
-            return true;
+            try
+            {
+                EnsureConnected();
+                _client.WriteRecord(record, /*needLock*/ false, /*ifUpdate*/ true);
+                return true;
+            } catch (Exception ex)
+            {
+                LogIrbis("WRITE FAIL MFN=" + record?.Mfn + " DB=" + _client?.Database + " ERR=" + ex.Message);
+                return false;
+            }
         }
 
         private string FormatRecord(string format, int mfn)
@@ -228,14 +240,19 @@ namespace LibraryTerminal
             finally { _client.Database = saved; }
         }
 
+        // ★ единая обёртка для brief (используется в Issue/Return)
+        private string FormatBrief(string fmt, string db, int mfn)
+        {
+            return WithDatabase(db, () => FormatRecord(fmt, mfn));
+        }
+
         // Быстрая проверка коннекта
         public bool TestConnection(out string error)
         {
             try
             {
                 EnsureConnected();
-                var db = ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS";
-                var ok = WithDatabase(db, () => { var _ = FormatRecord("@brief", 1); return true; });
+                var ok = WithDatabase(BooksDb, () => { var _ = FormatRecord("@brief", 1); return true; });
                 error = null;
                 return ok;
             } catch (Exception ex)
@@ -253,10 +270,9 @@ namespace LibraryTerminal
         {
             if (string.IsNullOrWhiteSpace(uid)) return false;
 
-            string rdrDb = ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
+            string rdrDb = ReadersDb;
             UseDatabase(rdrDb);
 
-            // собираем шаблоны
             var patterns = new List<string>();
             var listRaw = ConfigurationManager.AppSettings["ExprReaderByUidList"];
             if (!string.IsNullOrWhiteSpace(listRaw))
@@ -289,32 +305,22 @@ namespace LibraryTerminal
             return false;
         }
 
-        /// <summary>
-        /// NEW: Проверка читателя по номеру читательского билета. True — найден.
-        /// Использует шаблоны из App.config:
-        ///   ExprReaderByTicketList = "R={0}";"TKT={0}";...  (через ; )
-        ///   ExprReaderByTicket     = "R={0}"
-        /// Если не задано — дефолт "\"R={0}\"".
-        /// Поддержка цифровых номеров с ведущими нулями (попытки PadLeft до 10 и 8).
-        /// </summary>
+        /// <summary>Проверка по номеру читательского билета.</summary>
         public bool ValidateReaderByTicketNumber(string value)
         {
             if (string.IsNullOrWhiteSpace(value)) return false;
 
-            // если похоже на UID/HEX — сразу пробуем карточный путь
             var raw = value.Trim();
             var hexOnly = new string(raw.Where(Uri.IsHexDigit).Select(char.ToUpperInvariant).ToArray());
             if (hexOnly.Length >= 8 && hexOnly.Length <= 32 && hexOnly.All(Uri.IsHexDigit))
             {
                 LogIrbis($"TICKET looks like UID HEX -> fallback to ValidateCard(), val={raw}");
-                return ValidateCard(hexOnly); // это выставит LastReaderMfn
+                return ValidateCard(hexOnly);
             }
 
-            string rdrDb = ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
+            string rdrDb = ReadersDb;
             UseDatabase(rdrDb);
 
-            // Список шаблонов из конфига (гибко меняется без кода)
-            // Примеры:  "R={0}"; "RR={0}"; "\"BAR={0}\""; "\"TICKET={0}\""
             var patterns = new List<string>();
             var listRaw = ConfigurationManager.AppSettings["ExprReaderByTicketList"];
             if (!string.IsNullOrWhiteSpace(listRaw))
@@ -324,10 +330,8 @@ namespace LibraryTerminal
             if (!string.IsNullOrWhiteSpace(single))
                 patterns.Add(single.Trim());
 
-            // дефолт — как у тебя в логах
             if (patterns.Count == 0) patterns.Add("\"R={0}\"");
 
-            // Нормализации: как есть; только цифры; с обрезкой пробелов/нули слева
             var candidates = new List<string>();
             var digitsOnly = new string(raw.Where(char.IsDigit).ToArray());
             candidates.Add(raw);
@@ -354,41 +358,30 @@ namespace LibraryTerminal
             return false;
         }
 
-
         /// <summary>
-        /// Поиск книги по RFID-метке (910^h) в IBIS.
-        /// Теперь пробуем полный EPC-96 и «хвосты» (последние 16 и 8 hex).
+        /// Поиск книги по RFID-метке (910^h) в IBIS. Пробуем полный EPC-96 и «хвосты».
         /// </summary>
         public MarcRecord FindOneByBookRfid(string rfid)
         {
             rfid = NormalizeId(rfid);
             if (string.IsNullOrWhiteSpace(rfid)) return null;
 
-            // оставляем HEX, режем до 24 (EPC-96)
             rfid = new string(rfid.Where(Uri.IsHexDigit).Select(char.ToUpperInvariant).ToArray());
             if (rfid.Length < 8) { LogIrbis("BAD RFID KEY: " + rfid); return null; }
             if (rfid.Length > 24) rfid = rfid.Substring(0, 24);
 
-            // варианты ключа: полный, хвост-16 (8 байт), хвост-8 (4 байта)
             var keyVariants = new List<string> { rfid };
             if (rfid.Length >= 16) keyVariants.Add(rfid.Substring(rfid.Length - 16));
             if (rfid.Length >= 8) keyVariants.Add(rfid.Substring(rfid.Length - 8));
 
-            string booksDb = ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS";
+            string booksDb = BooksDb;
 
-            // шаблоны поиска (первым — из конфига, если задан)
             var patterns = new List<string>();
             var cfgPat = ConfigurationManager.AppSettings["ExprBookByRfid"];
             if (!string.IsNullOrWhiteSpace(cfgPat)) patterns.Add(cfgPat);
 
-            // типовые индексы на RFID/910^h
             patterns.AddRange(new[] {
-                "\"H={0}\"",
-                "\"HI={0}\"",
-                "\"HIN={0}\"",
-                "\"RF={0}\"",
-                "\"RFID={0}\"",
-                "\"IN={0}\""
+                "\"H={0}\"","\"HI={0}\"","\"HIN={0}\"","\"RF={0}\"","\"RFID={0}\"","\"IN={0}\""
             });
 
             MarcRecord found = null;
@@ -416,15 +409,13 @@ namespace LibraryTerminal
             return found;
         }
 
-        /// <summary>
-        /// Универсальный поиск: если 24HEX — метка (по IN=), иначе можно задать другой шаблон.
-        /// </summary>
+        /// <summary>Универсальный поиск: если 24HEX — метка (по IN=), иначе по инвентарному.</summary>
         public MarcRecord FindOneByInvOrTag(string value)
         {
             value = NormalizeId(value);
             if (string.IsNullOrWhiteSpace(value)) return null;
 
-            string booksDb = ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS";
+            string booksDb = BooksDb;
             string exprInv = ConfigurationManager.AppSettings["ExprBookByInv"] ?? "\"IN={0}\"";
             string exprTag = ConfigurationManager.AppSettings["ExprBookByRfid"] ?? "\"IN={0}\"";
 
@@ -434,28 +425,56 @@ namespace LibraryTerminal
             return WithDatabase(booksDb, delegate { return FindOne(expr); });
         }
 
-        /// <summary>Сменить 910^a по RFID (910^h), ничего не добавляя.</summary>
-        public bool UpdateBook910StatusByRfidStrict(MarcRecord record, string rfidKey, string newStatus, string _unused = null)
+        /// <summary>
+        /// Обновить статус экземпляра в 910 по RFID (910^h): ^A = "0" | "1".
+        /// Запись сохраняется в текущем клиенте, без дополнительных подключений.
+        /// </summary>
+        public bool UpdateBook910StatusByRfidStrict(IrbisRecord rec, string scannedTag, string newStatus)
         {
-            if (record == null || string.IsNullOrWhiteSpace(rfidKey)) return false;
+            if (rec == null) return false;
+            var key = NormalizeTag(scannedTag);
+            if (string.IsNullOrEmpty(key)) return false;
 
-            rfidKey = NormalizeId(rfidKey);
+            // 1) Находим нужный повтор 910 по ^h (допускаем «хвостовое» совпадение)
+            RecordField f910 = null;
+            foreach (var f in rec.Fields)
+            {
+                if (f.Tag != "910") continue;
+                var hVal = NormalizeTag(f.GetFirstSubFieldText('h'));
+                if (string.IsNullOrEmpty(hVal)) continue;
 
-            var target = record.Fields
-                .GetField("910")
-                .FirstOrDefault(f => NormalizeId(f.GetFirstSubFieldText('h')) == rfidKey);
-            if (target == null) { LogIrbis("Update910 FAIL: 910^h=" + rfidKey + " not found"); return false; }
+                if (hVal == key || key.EndsWith(hVal) || hVal.EndsWith(key))
+                {
+                    f910 = f;
+                    break;
+                }
+            }
+            if (f910 == null) return false;
 
-            var sfa = target.SubFields.FirstOrDefault(s => s.Code == 'a');
-            var sfh = target.SubFields.FirstOrDefault(s => s.Code == 'h');
-            if (sfa == null || sfh == null) { LogIrbis("Update910 FAIL: subfields a/h missing"); return false; }
+            // 2) Гарантируем наличие ^h
+            var hSf = f910.SubFields.FirstOrDefault(sf => sf.Code == 'h');
+            if (hSf == null) f910.AddSubField('h', key);
+            else if (string.IsNullOrWhiteSpace(hSf.Text)) hSf.Text = key;
 
-            var before = Dump910Short(record, rfidKey);
-            sfa.Text = newStatus ?? "";
-            var ok = WriteRecordSafe(record);
-            var after = Dump910Short(record, rfidKey);
-            LogIrbis("Update910 " + (ok ? "OK" : "FAIL") + ": " + before + " -> " + after);
-            return ok;
+            // 3) Upsert статуса ^a (0/1)
+            var aSf = f910.SubFields.FirstOrDefault(sf => sf.Code == 'a');
+            if (aSf == null) f910.AddSubField('a', newStatus);
+            else aSf.Text = newStatus;
+
+            // 4) Сохраняем запись в IBIS
+            var booksDb = rec.Database ?? BooksDb;
+            return WithDatabase(booksDb, () => WriteRecordSafe(rec));
+        }
+
+        // ===== ХЕЛПЕРЫ =====
+
+        private static string NormalizeTag(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            s = s.Trim().Replace(" ", "").Replace("-", "").Replace(":", "");
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                s = s.Substring(2);
+            return s.ToUpperInvariant();
         }
 
         private static string Dump910Short(MarcRecord rec, string rfid)
@@ -475,7 +494,7 @@ namespace LibraryTerminal
         {
             if (readerMfn <= 0 || bookRec == null || string.IsNullOrWhiteSpace(rfidHex)) return false;
 
-            string rdrDb = ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
+            string rdrDb = ReadersDb;
             UseDatabase(rdrDb);
 
             var rdr = ReadRecord(readerMfn);
@@ -491,118 +510,127 @@ namespace LibraryTerminal
             string placeK = ex910 != null ? (ex910.GetFirstSubFieldText('d') ?? "") : "";
 
             string bookDb = !string.IsNullOrEmpty(catalogDbName) ? catalogDbName
-                           : (bookRec.Database ?? (ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS"));
+                           : (bookRec.Database ?? BooksDb);
             string brief = WithDatabase(bookDb, delegate { return FormatRecord("@brief", bookRec.Mfn); }) ?? "";
 
-            string date = DateTime.Now.ToString("yyyyMMdd");
-            string time = DateTime.Now.ToString("HHmmss");
-            string dateDue = DateTime.Now.AddDays(30).ToString("yyyyMMdd");
+            var now = DateTime.Now;
+            string date = now.ToString("yyyyMMdd");
+            string time = now.ToString("HHmmss");
+            int loanDays = int.TryParse(ConfigurationManager.AppSettings["LoanDays"], out var dd) ? dd : 30;
+            string dateDue = now.AddDays(loanDays).ToString("yyyyMMdd");
 
             var f40 = new RecordField("40")
-                .AddSubField('a', shelfmark)
-                .AddSubField('b', inv)
-                .AddSubField('c', brief)
-                .AddSubField('k', placeK)
-                .AddSubField('v', maskMrg ?? "")
-                .AddSubField('d', date)
-                .AddSubField('1', time)
-                .AddSubField('e', dateDue)
-                .AddSubField('f', "******")
-                .AddSubField('g', bookDb)
-                .AddSubField('h', rfidHex)
-                .AddSubField('i', string.IsNullOrWhiteSpace(login) ? (CurrentLogin ?? "") : login);
+                .AddSubField('A', shelfmark)                          // шифр (903)
+                .AddSubField('B', inv)                                // инв. номер (910^B)
+                .AddSubField('C', brief)                              // краткое описание
+                .AddSubField('K', placeK)                             // место хранения (910^D)
+                .AddSubField('V', maskMrg ?? "")                      // место выдачи (MaskMrg)
+                .AddSubField('D', date)                               // дата выдачи
+                .AddSubField('1', time)                               // время выдачи
+                .AddSubField('E', dateDue)                            // дата предполагаемого возврата
+                .AddSubField('F', "******")                           // пока не возвращена
+                .AddSubField('G', bookDb)                             // БД каталога
+                .AddSubField('H', rfidHex)                            // RFID метка книги
+                .AddSubField('I', string.IsNullOrWhiteSpace(login) ? (CurrentLogin ?? "") : login) // оператор
+                .AddSubField('Z', Guid.NewGuid().ToString("N"));      // идентификатор строки
 
-            var added = false;
-            try { rdr.Fields.Add(f40); added = true; } catch { }
-            if (!added) return false;
+            rdr.Fields.Add(f40);
 
             var ok = WriteRecordSafe(rdr);
             LogIrbis("AppendRdr40 MFN=" + readerMfn + " RFID=" + rfidHex + " ok=" + ok);
             return ok;
         }
 
-        /// <summary>Закрыть поле 40 при возврате (ищем по H= в RDR).</summary>
+        /// <summary>Закрыть поле 40 при возврате (ищем по HIN=rfid книги в RDR, как в инструкции).</summary>
         public bool CompleteRdr40OnReturn(string rfidHex, string maskMrg, string login)
         {
             rfidHex = NormalizeId(rfidHex);
             if (string.IsNullOrWhiteSpace(rfidHex)) return false;
 
-            string rdrDb = ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
+            string rdrDb = ReadersDb;
             UseDatabase(rdrDb);
 
-            string expr = string.Format(ConfigurationManager.AppSettings["ExprReaderByItemRfid"] ?? "\"H={0}\"", rfidHex);
+            // По умолчанию — HIN={rfid}, см. инструкцию по возврату
+            string expr = string.Format(
+                ConfigurationManager.AppSettings["ExprReaderByItemRfid"] ?? "\"HIN={0}\"",
+                rfidHex
+            );
+
             var rdr = FindOne(expr);
             if (rdr == null) return false;
 
             var f40 = rdr.Fields
                 .GetField("40")
                 .FirstOrDefault(f =>
-                    string.Equals(f.GetFirstSubFieldText('h'), rfidHex, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(f.GetFirstSubFieldText('f'), "******", StringComparison.OrdinalIgnoreCase));
+                    string.Equals(f.GetFirstSubFieldText('H'), rfidHex, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(f.GetFirstSubFieldText('F'), "******", StringComparison.OrdinalIgnoreCase));
             if (f40 == null) return false;
 
-            // ^C — убрать brief
-            f40.RemoveSubField('c');
+            // ^C — удалить краткое описание
+            f40.RemoveSubField('C');
 
-            // ^R — место возврата (если включено)
-            bool useR = (ConfigurationManager.AppSettings["UseSubfieldR_ReturnPlace"] ?? "false")
-                .Equals("true", StringComparison.OrdinalIgnoreCase);
+            // ^R — место возврата
+            var useR = true; // по умолчанию пишем R; можно сделать опцией
             if (useR)
             {
                 var rVal = maskMrg ?? "";
-                var sfr = f40.SubFields.FirstOrDefault(sf => sf.Code == 'r');
-                if (sfr == null) f40.AddSubField('r', rVal); else sfr.Text = rVal;
+                var sfr = f40.SubFields.FirstOrDefault(sf => char.ToUpperInvariant(sf.Code) == 'R');
+                if (sfr == null) f40.AddSubField('R', rVal); else sfr.Text = rVal;
             }
 
+            var now = DateTime.Now;
+
             // ^2 — время возврата
-            var nowTime = DateTime.Now.ToString("HHmmss");
+            var nowTime = now.ToString("HHmmss");
             var sf2 = f40.SubFields.FirstOrDefault(sf => sf.Code == '2');
             if (sf2 == null) f40.AddSubField('2', nowTime); else sf2.Text = nowTime;
 
             // ^F — фактическая дата возврата
-            var nowDate = DateTime.Now.ToString("yyyyMMdd");
-            var sff = f40.SubFields.FirstOrDefault(sf => sf.Code == 'f');
-            if (sff == null) f40.AddSubField('f', nowDate); else sff.Text = nowDate;
+            var nowDate = now.ToString("yyyyMMdd");
+            var sff = f40.SubFields.FirstOrDefault(sf => char.ToUpperInvariant(sf.Code) == 'F');
+            if (sff == null) f40.AddSubField('F', nowDate); else sff.Text = nowDate;
 
-            // ^I — ответственное лицо
+            // ^I — ответственное лицо (оператор)
             var iVal = string.IsNullOrWhiteSpace(login) ? (CurrentLogin ?? "") : login;
-            var sfi = f40.SubFields.FirstOrDefault(sf => sf.Code == 'i');
-            if (sfi == null) f40.AddSubField('i', iVal); else sfi.Text = iVal;
+            var sfi = f40.SubFields.FirstOrDefault(sf => char.ToUpperInvariant(sf.Code) == 'I');
+            if (sfi == null) f40.AddSubField('I', iVal); else sfi.Text = iVal;
 
             var ok = WriteRecordSafe(rdr);
             LogIrbis("CompleteRdr40 RFID=" + rfidHex + " ok=" + ok);
             return ok;
         }
 
-        /// <summary>Выдача: СНАЧАЛА 40 в RDR, потом 910^a=1.</summary>
+        /// <summary>Выдача: СНАЧАЛА 40 в RDR, потом 910^A=1.</summary>
         public string IssueByRfid(string bookRfid)
         {
             bookRfid = NormalizeId(bookRfid);
             if (LastReaderMfn <= 0) throw new InvalidOperationException("Сначала вызови ValidateCard() для читателя.");
-            if (string.IsNullOrWhiteSpace(bookRfid)) throw new ArgumentNullException("bookRfid");
+            if (string.IsNullOrWhiteSpace(bookRfid)) throw new ArgumentNullException(nameof(bookRfid));
 
             var book = FindOneByBookRfid(bookRfid);
             if (book == null) throw new InvalidOperationException("Книга по RFID не найдена.");
 
             var maskMrg = GetMaskMrg();
-            var dbName = book.Database ?? (ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS");
+            var dbName = book.Database ?? BooksDb;
 
-            // 1) главное действие — запись в RDR
+            // 1) запись в RDR (поле 40)
             if (!AppendRdr40OnIssue(LastReaderMfn, book, bookRfid, maskMrg, CurrentLogin, dbName))
                 throw new InvalidOperationException("Не удалось добавить поле 40 читателю.");
 
-            // 2) смена статуса книги
+            // 2) смена статуса книги (910^A=1)
             if (!UpdateBook910StatusByRfidStrict(book, bookRfid, "1"))
                 throw new InvalidOperationException("Не удалось обновить статус книги (910^A=1).");
 
-            return WithDatabase(dbName, delegate { return FormatRecord("@brief", book.Mfn); });
+            // ★ единое форматирование brief (что ждёт MainForm)
+            var brief = FormatBrief(BookBriefFormat, dbName, book.Mfn);
+            return string.IsNullOrWhiteSpace(brief) ? "[без описания]" : brief.Trim();
         }
 
-        /// <summary>Возврат: СНАЧАЛА закрываем 40, потом 910^a=0.</summary>
+        /// <summary>Возврат: СНАЧАЛА закрываем 40, потом 910^A=0.</summary>
         public string ReturnByRfid(string bookRfid)
         {
             bookRfid = NormalizeId(bookRfid);
-            if (string.IsNullOrWhiteSpace(bookRfid)) throw new ArgumentNullException("bookRfid");
+            if (string.IsNullOrWhiteSpace(bookRfid)) throw new ArgumentNullException(nameof(bookRfid));
 
             // 1) закрываем поле 40 у читателя
             if (!CompleteRdr40OnReturn(bookRfid, GetMaskMrg(), CurrentLogin))
@@ -615,8 +643,11 @@ namespace LibraryTerminal
             if (!UpdateBook910StatusByRfidStrict(book, bookRfid, "0"))
                 throw new InvalidOperationException("Не удалось обновить статус книги (910^A=0).");
 
-            var dbName = book.Database ?? (ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS");
-            return WithDatabase(dbName, delegate { return FormatRecord("@brief", book.Mfn); });
+            var dbName = book.Database ?? BooksDb;
+
+            // ★ единое форматирование brief (что ждёт MainForm)
+            var brief = FormatBrief(BookBriefFormat, dbName, book.Mfn);
+            return string.IsNullOrWhiteSpace(brief) ? "[без описания]" : brief.Trim();
         }
 
         public void Dispose()

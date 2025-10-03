@@ -37,6 +37,12 @@ namespace LibraryTerminal
             try { Directory.CreateDirectory(path); } catch { }
             return path;
         }
+        public static void LogArduino(string line)
+        {
+            try { Append("arduino.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {line}"); } catch { }
+        }
+
+
 
         public static string Dir => _dir;
         public static string PathFor(string fileName) => Path.Combine(_dir, fileName);
@@ -66,9 +72,9 @@ namespace LibraryTerminal
         private readonly WinFormsTimer _tick = new WinFormsTimer { Interval = 250 };
         private DateTime? _deadline = null;
 
-        private static bool _emu, _dry, _emuUI, _dk;
+        // эмуляторы и демо-режимы (DryRun УДАЛЁН)
+        private static bool _emu, _emuUI, _dk;
         private static readonly bool USE_EMULATOR = bool.TryParse(ConfigurationManager.AppSettings["UseEmulator"], out _emu) && _emu;
-        private static readonly bool DRY_RUN = bool.TryParse(ConfigurationManager.AppSettings["DryRun"], out _dry) && _dry;
         private static readonly bool DEMO_UI = bool.TryParse(ConfigurationManager.AppSettings["UseEmulator"], out _emuUI) && _emuUI;
         private static readonly bool DEMO_KEYS = bool.TryParse(ConfigurationManager.AppSettings["DemoKeys"], out _dk) && _dk;
 
@@ -126,6 +132,34 @@ namespace LibraryTerminal
 
         private static Task OffUi(Action a) { return Task.Run(a); }
         private static Task<T> OffUi<T>(Func<T> f) { return Task.Run(f); }
+
+
+        private int _currentBookMfn;
+        private string _currentBookBrief;
+        private string _currentBookInv;
+
+        // ======== ARDUINO: лог и сахар-команды (всегда пишем в лог, даже без железа) ========
+        private void LogArduino(string msg)
+        {
+            try { Logger.Append("arduino.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}"); } catch { }
+        }
+        private void ArduinoSend(string cmd)
+        {
+            // лог всегда
+            LogArduino("TX: " + cmd);
+            try
+            {
+                _ardu?.Send(cmd);      // отправка в реальный порт, если он есть
+            } catch (Exception ex)
+            {
+                LogArduino("SEND_ERR: " + ex.Message);
+            }
+        }
+
+
+        private void ArduinoOk() => ArduinoSend("OK");
+        private void ArduinoError() => ArduinoSend("ERR");
+        private void ArduinoBeep(int ms = 120) => ArduinoSend($"BEEP:{ms}");
 
         public MainForm()
         {
@@ -260,10 +294,20 @@ namespace LibraryTerminal
                         {
                             _ardu = new ArduinoClientSerial(arduinoPort, baudArduino, nlArduino, readTo, writeTo, reconnMs);
                             _ardu.Start();
+                            LogArduino($"INIT: enable=True, port={arduinoPort}, baud={baudArduino}, nl={EscapeNL(nlArduino)}");
                         }
+                        else
+                        {
+                            LogArduino("INIT: enable=True, but no port specified — working in NULL mode (only logging)");
+                        }
+                    }
+                    else
+                    {
+                        LogArduino("INIT: enable=False — working in NULL mode (only logging)");
                     }
                 } catch (Exception ex)
                 {
+                    LogArduino("START_ERR: " + ex.Message);
                     MessageBox.Show("Оборудование (COM): " + ex.Message, "COM", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
@@ -466,7 +510,7 @@ namespace LibraryTerminal
                 return;
 
             bool ok = await OffUi<bool>(delegate { return _svc.ValidateCard(uid); });
-            if (!ok) { Switch(Screen.S8_CardFail, panelError, TIMEOUT_SEC_ERROR); return; }
+            if (!ok) { ArduinoError(); Switch(Screen.S8_CardFail, panelError, TIMEOUT_SEC_ERROR); return; }
 
             string brief = await SafeGetReaderBriefAsync(_svc.LastReaderMfn);
             if (!string.IsNullOrWhiteSpace(brief))
@@ -528,6 +572,11 @@ namespace LibraryTerminal
         private async Task AfterReaderOkAsync(bool isReturn)
         {
             var brief = await SafeGetReaderBriefAsync(_svc.LastReaderMfn);
+
+            // если формат пустой — показываем запасной текст
+            if (string.IsNullOrWhiteSpace(brief))
+                brief = "Читатель идентифицирован (MFN: " + _svc.LastReaderMfn + ")";
+
             lblReaderInfoTake.Text = brief;
             lblReaderInfoReturn.Text = brief;
 
@@ -542,6 +591,7 @@ namespace LibraryTerminal
                 SetReaderHeader(brief, isReturn: true);
             }
         }
+
 
         // ---------- книги ----------
 
@@ -648,9 +698,30 @@ namespace LibraryTerminal
         }
 
         private Task<bool> OpenBinAsync()
-        { return _ardu == null ? Task.FromResult(true) : OffUi<bool>(delegate { _ardu.OpenBin(); return true; }); }
+        {
+            // Логируем всегда
+            LogArduino("CMD: OPEN_BIN");
+            if (_ardu == null) return Task.FromResult(true);
+            return OffUi<bool>(delegate {
+                try { _ardu.OpenBin(); return true; } catch (Exception ex) { LogArduino("OPEN_BIN_ERR: " + ex.Message); return false; }
+            });
+        }
+
         private Task<bool> HasSpaceAsync()
-        { return _ardu == null ? Task.FromResult(true) : OffUi<bool>(delegate { return _ardu.HasSpace(); }); }
+        {
+            // Логируем всегда
+            LogArduino("CMD: HAS_SPACE?");
+            if (_ardu == null)
+            {
+                LogArduino("HAS_SPACE: assume TRUE (no hardware)");
+                return Task.FromResult(true);
+            }
+            return OffUi<bool>(delegate {
+                try { var ok = _ardu.HasSpace(); LogArduino("HAS_SPACE: " + (ok ? "TRUE" : "FALSE")); return ok; } catch (Exception ex) { LogArduino("HAS_SPACE_ERR: " + ex.Message); return false; }
+            });
+        }
+
+        private static string EscapeNL(string s) => s?.Replace("\r", "\\r").Replace("\n", "\\n");
 
         // ====== ВЫДАЧА ======
         private async Task HandleTakeAsync(string bookTag)
@@ -663,6 +734,7 @@ namespace LibraryTerminal
                 {
                     lblError.Text = "Сначала выполните проверку читателя";
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: no reader (LastReaderMfn=0)");
+                    ArduinoError();
                     Switch(Screen.S8_CardFail, panelError, TIMEOUT_SEC_ERROR);
                     return;
                 }
@@ -673,6 +745,7 @@ namespace LibraryTerminal
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: rec=null for tag={bookTag}");
                     SetBookInfo(lblBookInfoTake, "Книга не найдена по метке.");
+                    ArduinoError();
                     Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
                     return;
                 }
@@ -693,6 +766,7 @@ namespace LibraryTerminal
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: 910^h not matched for tag={bookTag} MFN={rec.Mfn}");
                     SetBookInfo(lblBookInfoTake, "Эта метка не соответствует экземпляру.");
+                    ArduinoError();
                     Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
                     return;
                 }
@@ -704,54 +778,36 @@ namespace LibraryTerminal
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: already issued (a={status}) MFN={rec.Mfn}");
                     SetBookInfo(lblBookInfoTake, "Эта книга уже выдана.");
+                    ArduinoError();
                     Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
                     return;
                 }
 
-                // 5) Dry-run?
-                if (DRY_RUN)
+                // 5) Реальная запись в ИРБИС (RDR.40 + 910^A=1)
+                var brief = await OffUi(() => _svc.IssueByRfid(bookTag));
+                if (string.IsNullOrWhiteSpace(brief))
                 {
-                    SetSuccessWithMfn("Dry-run: найдены читатель и книга (без записи в БД)", rec.Mfn);
-                    Switch(Screen.S6_Success, panelSuccess, TIMEOUT_SEC_SUCCESS);
+                    // считаем неуспешной попыткой — в UI не показываем «успех»
+                    lblError.Text = "Не удалось записать выдачу в ИРБИС";
+                    Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: FAIL (IssueByRfid returned empty) tag={bookTag} mfn={rec.Mfn}");
+                    ArduinoError();
+                    Switch(Screen.S8_CardFail, panelError, TIMEOUT_SEC_ERROR);
                     return;
                 }
 
-                // 6) Запись в RDR 40
-                bool ok40 = await OffUi(() =>
-                    _svc.AppendRdr40OnIssue(
-                        _svc.LastReaderMfn,
-                        rec,
-                        bookTag,
-                        ConfigurationManager.AppSettings["MaskMrg"] ?? "09",
-                        _svc.CurrentLogin ?? "terminal",
-                        ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS"
-                    )
-                );
-                if (!ok40)
-                {
-                    Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: AppendRdr40 FAILED MFN(reader)={_svc.LastReaderMfn}");
-                    SetBookInfo(lblBookInfoTake, "Не удалось записать выдачу.");
-                    Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
-                    return;
-                }
-
-                // 7) Обновляем 910^a
-                bool okSet = await OffUi(() => _svc.UpdateBook910StatusByRfidStrict(rec, bookTag, STATUS_ISSUED, null));
-                if (!okSet)
-                {
-                    Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: Update910 to '1' FAILED MFN={rec.Mfn}");
-                    SetBookInfo(lblBookInfoTake, "Не удалось обновить статус экземпляра.");
-                    Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
-                    return;
-                }
+                _lastBookBrief = brief.Replace("\r", " ").Replace("\n", " ").Trim();
 
                 await OpenBinAsync();
+                Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: OK tag={bookTag} mfn={rec.Mfn}");
                 SetSuccessWithMfn("Книга выдана", rec.Mfn);
+                ArduinoOk();
+                ArduinoBeep(120);
                 Switch(Screen.S6_Success, panelSuccess, TIMEOUT_SEC_SUCCESS);
             } catch (Exception ex)
             {
                 lblError.Text = "Ошибка выдачи: " + ex.Message;
                 Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TAKE: EX={ex.Message}");
+                ArduinoError();
                 Switch(Screen.S8_CardFail, panelError, TIMEOUT_SEC_ERROR);
             }
         }
@@ -764,18 +820,16 @@ namespace LibraryTerminal
                 await EnsureIrbisConnectedAsync();
 
                 var rec = await OffUi<ManagedClient.IrbisRecord>(() => _svc.FindOneByBookRfid(bookTag));
+       
                 if (rec == null)
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] RETURN: rec=null for tag={bookTag}");
                     SetBookInfo(lblBookInfoReturn, "Книга не найдена по метке.");
-                    if (USE_EMULATOR) { Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG); return; }
-
-                    Switch(Screen.S7_BookRejected, panelNoTag, null);
-                    var hop = new WinFormsTimer { Interval = 2000 };
-                    hop.Tick += (s, e2) => { hop.Stop(); hop.Dispose(); Switch(Screen.S9_NoSpace, panelOverflow, TIMEOUT_SEC_NO_SPACE); };
-                    hop.Start();
+                    ArduinoError();
+                    Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
                     return;
                 }
+
 
                 // >>> Показать MFN + краткое описание
                 await ShowBookInfoOnLabel(rec, takeMode: false);
@@ -789,50 +843,35 @@ namespace LibraryTerminal
                 if (!hasSpace)
                 {
                     Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] RETURN: no space in bin");
+                    ArduinoError();
                     Switch(Screen.S9_NoSpace, panelOverflow, TIMEOUT_SEC_NO_SPACE);
                     return;
                 }
 
-                if (DRY_RUN)
+                // Реальная запись в ИРБИС (закрыть 40 + 910^A=0)
+                var brief = await OffUi(() => _svc.ReturnByRfid(bookTag));
+                if (string.IsNullOrWhiteSpace(brief))
                 {
-                    SetSuccessWithMfn("Dry-run: книга найдена (возврат без записи в БД)", rec.Mfn);
-                    Switch(Screen.S6_Success, panelSuccess, TIMEOUT_SEC_SUCCESS);
+                    lblError.Text = "Не удалось записать возврат в ИРБИС";
+                    Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] RETURN: FAIL (ReturnByRfid returned empty) tag={bookTag} mfn={rec.Mfn}");
+                    ArduinoError();
+                    Switch(Screen.S8_CardFail, panelError, TIMEOUT_SEC_ERROR);
                     return;
                 }
 
-                // Закрываем 40
-                bool ok40 = await OffUi(() =>
-                    _svc.CompleteRdr40OnReturn(
-                        bookTag,
-                        ConfigurationManager.AppSettings["MaskMrg"] ?? "09",
-                        _svc.CurrentLogin ?? "terminal"
-                    )
-                );
-                if (!ok40)
-                {
-                    Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] RETURN: CompleteRdr40 FAILED");
-                    SetBookInfo(lblBookInfoReturn, "Не удалось закрыть выдачу у читателя.");
-                    Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
-                    return;
-                }
-
-                // 910^a = 0
-                bool okSet = await OffUi(() => _svc.UpdateBook910StatusByRfidStrict(rec, bookTag, STATUS_IN_STOCK, null));
-                if (!okSet)
-                {
-                    Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] RETURN: Update910 to '0' FAILED MFN={rec.Mfn}");
-                    SetBookInfo(lblBookInfoReturn, "Не удалось обновить статус экземпляра.");
-                    Switch(Screen.S7_BookRejected, panelNoTag, TIMEOUT_SEC_NO_TAG);
-                    return;
-                }
+                _lastBookBrief = brief.Replace("\r", " ").Replace("\n", " ").Trim();
 
                 await OpenBinAsync();
+                Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] RETURN: OK tag={bookTag} mfn={rec.Mfn}");
                 SetSuccessWithMfn("Книга принята", rec.Mfn);
+                ArduinoOk();
+                ArduinoBeep(120);
                 Switch(Screen.S6_Success, panelSuccess, TIMEOUT_SEC_SUCCESS);
             } catch (Exception ex)
             {
                 lblError.Text = "Ошибка возврата: " + ex.Message;
                 Logger.Append("irbis.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] RETURN: EX={ex.Message}");
+                ArduinoError();
                 Switch(Screen.S8_CardFail, panelError, TIMEOUT_SEC_ERROR);
             }
         }
@@ -1002,15 +1041,19 @@ namespace LibraryTerminal
             try
             {
                 if (mfn <= 0) return null;
+
+                var rdrDb = ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
+                var briefFmt = ConfigurationManager.AppSettings["BriefFormat"] ?? "@brief";
+
                 return await OffUi<string>(delegate {
                     using (var client = new ManagedClient64())
                     {
                         client.ParseConnectionString(GetConnString());
                         client.Connect();
-                        client.PushDatabase("RDR");
-                        var brief = client.FormatRecord("@brief", mfn);
+                        client.PushDatabase(rdrDb);               // <-- берём из ReadersDb
+                        var brief = client.FormatRecord(briefFmt, mfn); // <-- берём формат из конфига
                         client.PopDatabase();
-                        return brief;
+                        return string.IsNullOrWhiteSpace(brief) ? null : brief.Trim();
                     }
                 });
             } catch { return null; }
@@ -1021,18 +1064,25 @@ namespace LibraryTerminal
             try
             {
                 if (mfn <= 0) return null;
-                return await OffUi<string>(delegate {
+
+                var booksDb = ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS";
+                var briefFmt = ConfigurationManager.AppSettings["BookBriefFormat"] ?? "@brief";
+
+                return await OffUi<string>(() => {
                     using (var client = new ManagedClient64())
                     {
                         client.ParseConnectionString(GetConnString());
                         client.Connect();
-                        client.PushDatabase(GetBooksDb());
-                        var brief = client.FormatRecord("@brief", mfn);
+                        client.PushDatabase(booksDb);
+                        var brief = client.FormatRecord(briefFmt, mfn);
                         client.PopDatabase();
-                        return brief;
+                        return string.IsNullOrWhiteSpace(brief) ? null : brief.Trim();
                     }
                 });
-            } catch { return null; }
+            } catch
+            {
+                return null;
+            }
         }
 
         private async Task ShowBookInfoAsync(string bookTag = null)

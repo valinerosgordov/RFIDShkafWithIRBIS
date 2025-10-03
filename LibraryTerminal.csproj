@@ -39,18 +39,23 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Acr1281PcscReader.cs" />
+    <Compile Include="ArduinoNull.cs" />
+    <Compile Include="ArduinoSerial.cs" />
     <Compile Include="Devices.cs" />
     <Compile Include="EpcParser.cs" />
+    <Compile Include="IArduino.cs" />
     <Compile Include="IrbisServiceManaged.cs" />
     <Compile Include="McCompatExtensions.cs" />
-    <Compile Include="PcscReader.cs" />
     <Compile Include="PortResolver.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="MainForm.cs" />
     <Compile Include="MainForm.Designer.cs" />
+    <Compile Include="Result.cs" />
     <Compile Include="Rru9816Reader.cs" />
     <Compile Include="RruOpenHelper.cs" />
+    <Compile Include="SerialHelpers.cs" />
     <Compile Include="SerialWorker.cs" />
+    <Compile Include="SerialWorkerExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="MainForm.resx">

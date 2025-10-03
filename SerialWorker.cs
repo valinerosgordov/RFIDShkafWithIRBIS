@@ -4,131 +4,183 @@ using System.Threading;
 
 namespace LibraryTerminal
 {
-    internal abstract class SerialWorker : IDisposable
+    /// <summary>
+    /// Базовая неблокирующая обёртка над SerialPort с авто-переподключением.
+    /// От неё наследуются ArduinoClientSerial / BookReaderSerial / CardReaderSerial.
+    /// </summary>
+    public class SerialWorker : IDisposable
     {
-        protected readonly string _portName;
-        protected readonly int _baud;
-        protected readonly string _newline;
-        protected readonly int _readTimeout;
-        protected readonly int _writeTimeout;
-        protected readonly int _reconnectDelayMs;
-
-        protected SerialPort _sp;
+        private SerialPort _sp;
         private Thread _reader;
-        private volatile bool _stop;
-        private readonly object _sync = new object();
+        private volatile bool _running;
+        private volatile bool _openedOnce;
 
-        protected SerialWorker(string portName, int baud, string newline, int readTimeoutMs, int writeTimeoutMs, int reconnectDelayMs)
+        protected readonly string PortName;
+        protected readonly int BaudRate;
+        protected readonly int ReadTimeoutMs;
+        protected readonly int WriteTimeoutMs;
+        protected readonly int ReconnectMs;
+
+        /// <summary>Разделитель строк при чтении/записи.</summary>
+        public string NewLine { get; protected set; }
+
+        /// <summary>Вызывается перед отправкой строки (для логгирования TX).</summary>
+        public event Action<string> OnBeforeWrite;
+
+        /// <summary>Событие с уже разобранной строкой RX. Альтернатива виртуальному OnLine.</summary>
+        public event Action<string> OnLineEvent;
+
+        /// <summary>Событие-синоним для совместимости со старым кодом.</summary>
+        public event Action<string> OnLineReceived;
+
+        public bool IsOpen => _sp != null && _sp.IsOpen;
+
+        /// <summary>
+        /// Конструктор базового воркера.
+        /// </summary>
+        /// <param name="portName">COM-порт (например, "COM3").</param>
+        /// <param name="baudRate">Скорость, бит/с.</param>
+        /// <param name="newline">Разделитель строк.</param>
+        /// <param name="readTimeoutMs">Таймаут чтения, мс.</param>
+        /// <param name="writeTimeoutMs">Таймаут записи, мс.</param>
+        /// <param name="autoReconnectMs">Пауза перед переподключением, мс.</param>
+        public SerialWorker(string portName, int baudRate, string newline, int readTimeoutMs, int writeTimeoutMs, int autoReconnectMs)
         {
-            _portName = portName;
-            _baud = baud;
-            _newline = DecodeNewline(newline);
-            _readTimeout = readTimeoutMs;
-            _writeTimeout = writeTimeoutMs;
-            _reconnectDelayMs = reconnectDelayMs;
+            PortName = portName;
+            BaudRate = baudRate;
+            ReadTimeoutMs = readTimeoutMs <= 0 ? 500 : readTimeoutMs;
+            WriteTimeoutMs = writeTimeoutMs <= 0 ? 500 : writeTimeoutMs;
+            ReconnectMs = autoReconnectMs <= 0 ? 1500 : autoReconnectMs;
+            NewLine = string.IsNullOrEmpty(newline) ? "\n" : newline;
         }
 
         public void Start()
         {
-            _stop = false;
-            _reader = new Thread(Loop) { IsBackground = true, Name = GetType().Name + "_Reader" };
+            if (_running) return;
+            _running = true;
+            _reader = new Thread(ReaderLoop) { IsBackground = true, Name = $"SerialWorker({PortName})" };
             _reader.Start();
         }
 
         public void Stop()
         {
-            _stop = true;
+            _running = false;
             try { _sp?.Close(); } catch { }
-            try { _reader?.Join(1000); } catch { }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
-            Stop();
+            _running = false;
+            try { _sp?.Close(); } catch { }
             try { _sp?.Dispose(); } catch { }
+            _sp = null;
+            _reader = null;
         }
 
-        protected virtual void OnOpened()
-        { }
-
-        protected virtual void OnClosed(Exception ex)
-        { }
-
-        protected abstract void OnLine(string line);
-
-        private void Loop()
+        /// <summary>Отправка текста как есть (без добавления NewLine).</summary>
+        public virtual void Write(string text)
         {
-            while (!_stop)
+            try
+            {
+                if (!_running) return;
+                EnsurePort();
+                OnBeforeWrite?.Invoke(text);
+                _sp.Write(text);
+            } catch
+            {
+                // глушим — цикл чтения переподключит порт
+            }
+        }
+
+        /// <summary>Отправка строки с добавлением NewLine.</summary>
+        public virtual void WriteLine(string line) => Write(line + NewLine);
+
+        /// <summary>Синоним для совместимости.</summary>
+        public virtual void Send(string line) => WriteLine(line);
+
+        // ====== protected virtual hooks (для наследников) ======
+        protected virtual void OnOpened() { }
+        protected virtual void OnClosed(Exception ex) { }
+        protected virtual void OnLine(string line) { }
+
+        // ====== внутренняя машинерия ======
+        private void ReaderLoop()
+        {
+            while (_running)
             {
                 try
                 {
-                    EnsureOpen();
-                    ReadLines();
+                    EnsurePort();
+
+                    if (!_openedOnce && IsOpen)
+                    {
+                        _openedOnce = true;
+                        SafeCallOpened();
+                    }
+
+                    var nl = NewLine;
+                    var buf = "";
+
+                    while (_running && IsOpen)
+                    {
+                        var ch = (char)_sp.ReadChar();
+                        buf += ch;
+                        if (buf.EndsWith(nl))
+                        {
+                            var line = buf.Substring(0, buf.Length - nl.Length);
+                            buf = "";
+                            SafeCallLine(line);
+                        }
+                    }
                 } catch (Exception ex)
                 {
-                    OnClosed(ex);
                     try { _sp?.Close(); } catch { }
-                    if (_stop) break;
-                    Thread.Sleep(_reconnectDelayMs);
+                    SafeCallClosed(ex);
+                    if (!_running) break;
+                    Thread.Sleep(ReconnectMs);
+                    _openedOnce = false;
                 }
             }
         }
 
-        private void EnsureOpen()
+        private void EnsurePort()
         {
             if (_sp != null && _sp.IsOpen) return;
 
-            lock (_sync)
-            {
-                if (_sp != null && _sp.IsOpen) return;
+            try { _sp?.Dispose(); } catch { }
 
-                _sp = new SerialPort(_portName, _baud)
-                {
-                    NewLine = _newline,
-                    ReadTimeout = _readTimeout,
-                    WriteTimeout = _writeTimeout,
-                    Encoding = System.Text.Encoding.ASCII,
-                    DtrEnable = true,
-                    RtsEnable = true
-                };
-                _sp.Open();
-                OnOpened();
-            }
+            _sp = new SerialPort(PortName, BaudRate)
+            {
+                NewLine = this.NewLine,
+                ReadTimeout = ReadTimeoutMs,
+                WriteTimeout = WriteTimeoutMs,
+                Parity = Parity.None,
+                DataBits = 8,
+                StopBits = StopBits.One,
+                DtrEnable = false,
+                RtsEnable = false
+            };
+            _sp.Open();
         }
 
-        private void ReadLines()
+        private void SafeCallOpened()
         {
-            while (!_stop && _sp != null && _sp.IsOpen)
-            {
-                string line = null;
-                try
-                {
-                    line = _sp.ReadLine();
-                } catch (TimeoutException)
-                {
-                    continue;
-                }
-                if (line == null) continue;
-                var trimmed = line.Trim();
-                if (trimmed.Length == 0) continue;
-
-                try { OnLine(trimmed); } catch { }
-            }
+            try { OnOpened(); } catch { }
         }
 
-        public void WriteLineSafe(string cmd)
+        private void SafeCallClosed(Exception ex)
         {
-            lock (_sync)
-            {
-                if (_sp == null || !_sp.IsOpen) return;
-                try { _sp.WriteLine(cmd); } catch { }
-            }
+            try { OnClosed(ex); } catch { }
         }
 
-        private static string DecodeNewline(string s)
+        private void SafeCallLine(string line)
         {
-            if (string.IsNullOrEmpty(s)) return "\n";
-            return s.Replace("\\r", "\r").Replace("\\n", "\n");
+            try
+            {
+                OnLine(line);
+                OnLineEvent?.Invoke(line);
+                OnLineReceived?.Invoke(line);
+            } catch { }
         }
     }
 }
