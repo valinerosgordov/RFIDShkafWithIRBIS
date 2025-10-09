@@ -29,6 +29,7 @@ namespace LibraryTerminal
     /// <summary>
     /// Опрос ридера по SDK (Inventory_G2) и событие EPC как HEX без разделителей.
     /// Работает и с IQRFID-5102, и с Chafon, т.к. обе говорят через UHFReader09CSharp.dll.
+    /// Сигнатура под «старую» DLL (короткая Inventory_G2).
     /// </summary>
     public sealed class UhfReader09Reader : IDisposable
     {
@@ -104,6 +105,7 @@ namespace LibraryTerminal
 
         public void Dispose() => Stop();
     }
+
     // ===== Глобальный логгер: пишет в LogsDir из App.config, иначе в .\Logs рядом с exe =====
     internal static class Logger
     {
@@ -189,13 +191,13 @@ namespace LibraryTerminal
 
         private Acr1281PcscReader _acr;
 
-        // старый UHF через стороннюю DLL (если есть в проекте)
+        // старый UHF через стороннюю DLL (книги)
         private Rru9816Reader _rruDll;
 
-        // ★ NEW: универсальный UHFReader09 SDK
+        // ★ NEW: универсальный UHFReader09 SDK (карты)
         private UhfReader09Reader _uhf09;
 
-        // ридер карт — CardReaderSerial (ASCII по COM)
+        // ридер карт — CardReaderSerial (ASCII по COM, если нужен)
         private CardReaderSerial _iqrfid;
 
         private string _lastBookTag = null;
@@ -375,7 +377,7 @@ namespace LibraryTerminal
                     "IQRFID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
-            // диагонистический пробник — если не открылись
+            // диагностический пробник — если не открылись
             if ("true".Equals(ConfigurationManager.AppSettings["DiagIqrfidProbe"], StringComparison.OrdinalIgnoreCase)
                 && (_iqrfid == null || !_iqrfid.IsOpen))
             {
@@ -504,7 +506,7 @@ namespace LibraryTerminal
                     MessageBox.Show("Оборудование (COM): " + ex.Message, "COM", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-                // --- RRU9816 через DLL (если используется в инсталляции)
+                // --- RRU9816 через DLL (книги)
                 try
                 {
                     string rruPort = ConfigurationManager.AppSettings["RruPort"] ?? "COM5";
@@ -513,7 +515,7 @@ namespace LibraryTerminal
                     _rruDll = null;
 
                     var rruDll = new Rru9816Reader(rruPort, rruBa, 0x00);
-                    rruDll.OnEpcHex += OnRruEpc;       // бизнес-обработка
+                    rruDll.OnEpcHex += OnRruEpc;       // бизнес-обработка КНИГ
                     rruDll.OnEpcHex += OnRruEpcDebug;  // отладка в лог
                     rruDll.Start();
 
@@ -544,12 +546,14 @@ namespace LibraryTerminal
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-                // ★ NEW: UHFReader09 SDK (IQRFID-5102 / Chafon)
+                // ★ NEW: UHFReader09 SDK (карты — EPC трактуем как UID)
                 try
                 {
                     _uhf09 = new UhfReader09Reader();
-                    _uhf09.OnEpc += OnRruEpc;       // используем уже готовую бизнес-обработку книг
-                    _uhf09.OnEpc += OnRruEpcDebug;  // и существующий лог
+
+                    // ВАЖНО: теперь шлём EPC в авторизацию читателя, а НЕ в книжный поток
+                    _uhf09.OnEpc += OnUhfCardUid;  // ← новый обработчик
+                    _uhf09.OnEpc += OnRruEpcDebug; // лог оставляем общий
 
                     // на твоих скринах: COM9 @ 57600 → baudIndex=3, период 100 мс
                     if (!_uhf09.Start(baudIndex: 3, pollMs: 100))
@@ -581,7 +585,7 @@ namespace LibraryTerminal
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-                // --- COM: IQRFID-5102 (карты) — автодетект/фикс.
+                // --- COM: IQRFID-5102 (ASCII карты) — автодетект/фикс (если нужно)
                 try
                 {
                     var _ = InitIqrfidAutoOrFixedAsync(readTo, writeTo, reconnMs, debounce);
@@ -624,7 +628,7 @@ namespace LibraryTerminal
 
             // остановим UHFReader09
             try { if (_uhf09 != null) _uhf09.OnEpc -= OnRruEpcDebug; } catch { }
-            try { if (_uhf09 != null) _uhf09.OnEpc -= OnRruEpc; } catch { }
+            try { if (_uhf09 != null) _uhf09.OnEpc -= OnUhfCardUid; } catch { }
             try { if (_uhf09 != null) _uhf09.Dispose(); } catch { }
 
             try { if (_bookReturn != null && _bookReturn != _bookTake) _bookReturn.Dispose(); } catch { }
@@ -667,20 +671,14 @@ namespace LibraryTerminal
         }
 
         // ---------- пункты меню ----------
-        // (твои обработчики кнопок и создание панелей ниже — оставлены как были)
-
         // Нижняя плашка для ручного ввода номера билета
-        private Panel _pnlManualTake, _pnlManualReturn;
-        private TextBox _txtTicketTake, _txtTicketReturn;
-        private Button _btnTicketTake, _btnTicketReturn;
-
+      
         private void btnTakeBook_Click(object sender, EventArgs e)
         {
             _mode = Mode.Take;
             _lastBookBrief = "";
-            ClearReaderHeaders();
+            lblReaderInfoTake.Visible = false;
             Switch(Screen.S2_WaitCardTake, panelWaitCardTake);
-            EnsureManualTicketPanelForTake();
             SetBookInfo(lblBookInfoTake, "");
         }
 
@@ -688,9 +686,8 @@ namespace LibraryTerminal
         {
             _mode = Mode.Return;
             _lastBookBrief = "";
-            ClearReaderHeaders();
+            lblReaderInfoReturn.Visible = false;
             Switch(Screen.S4_WaitCardReturn, panelWaitCardReturn);
-            EnsureManualTicketPanelForReturn();
             SetBookInfo(lblBookInfoReturn, "");
         }
 
@@ -704,75 +701,6 @@ namespace LibraryTerminal
                                        StringComparison.OrdinalIgnoreCase);
             if (upper) uid = uid.ToUpperInvariant();
             return uid;
-        }
-
-        private async Task DoReaderAuthManualAsync(bool isReturn)
-        {
-            try
-            {
-                await EnsureIrbisConnectedAsync();
-                var tb = isReturn ? _txtTicketReturn : _txtTicketTake;
-                var num = (tb?.Text ?? "").Trim();
-                if (string.IsNullOrEmpty(num)) { MessageBox.Show(this, "Введите номер читательского билета"); return; }
-
-                var ok = await OffUi(() => _svc.ValidateReaderByTicketNumber(num));
-                if (!ok) { MessageBox.Show(this, "Читатель не найден по номеру"); return; }
-
-                await AfterReaderOkAsync(isReturn);
-            } catch (Exception ex)
-            {
-                MessageBox.Show(this, "Ошибка проверки: " + ex.Message);
-            }
-        }
-
-        private async Task AfterReaderOkAsync(bool isReturn)
-        {
-            var brief = await SafeGetReaderBriefAsync(_svc.LastReaderMfn);
-            if (string.IsNullOrWhiteSpace(brief))
-                brief = "Читатель идентифицирован (MFN: " + _svc.LastReaderMfn + ")";
-
-            lblReaderInfoTake.Text = brief;
-            lblReaderInfoReturn.Text = brief;
-
-            if (!isReturn)
-            {
-                Switch(Screen.S3_WaitBookTake, panelScanBook);
-                SetReaderHeader(brief, isReturn: false);
-            }
-            else
-            {
-                Switch(Screen.S5_WaitBookReturn, panelScanBookReturn);
-                SetReaderHeader(brief, isReturn: true);
-            }
-        }
-
-
-        private void EnsureManualTicketPanelForTake()
-        {
-            if (_pnlManualTake != null && !_pnlManualTake.IsDisposed) return;
-
-            _pnlManualTake = new Panel { Height = 64, Dock = DockStyle.Bottom, BackColor = System.Drawing.Color.Transparent };
-            var lbl = new Label { AutoSize = true, Left = 12, Top = 12, Text = "Нет карты? Введите номер читательского билета:" };
-            _txtTicketTake = new TextBox { Left = 12, Top = 30, Width = 280 };
-            _btnTicketTake = new Button { Left = _txtTicketTake.Right + 8, Top = 28, Width = 120, Height = 26, Text = "Проверить" };
-            _btnTicketTake.Click += async (_, __) => await DoReaderAuthManualAsync(isReturn: false);
-
-            _pnlManualTake.Controls.AddRange(new Control[] { lbl, _txtTicketTake, _btnTicketTake });
-            panelWaitCardTake.Controls.Add(_pnlManualTake);
-        }
-
-        private void EnsureManualTicketPanelForReturn()
-        {
-            if (_pnlManualReturn != null && !_pnlManualReturn.IsDisposed) return;
-
-            _pnlManualReturn = new Panel { Height = 64, Dock = DockStyle.Bottom, BackColor = System.Drawing.Color.Transparent };
-            var lbl = new Label { AutoSize = true, Left = 12, Top = 12, Text = "Нет карты? Введите номер читательского билета:" };
-            _txtTicketReturn = new TextBox { Left = 12, Top = 30, Width = 280 };
-            _btnTicketReturn = new Button { Left = _txtTicketReturn.Right + 8, Top = 28, Width = 120, Height = 26, Text = "Проверить" };
-            _btnTicketReturn.Click += async (_, __) => await DoReaderAuthManualAsync(isReturn: true);
-
-            _pnlManualReturn.Controls.AddRange(new Control[] { lbl, _txtTicketReturn, _btnTicketReturn });
-            panelWaitCardReturn.Controls.Add(_pnlManualReturn);
         }
 
         // ---------- обработка UID ----------
@@ -802,6 +730,8 @@ namespace LibraryTerminal
                 brief = $"[{src}] {brief}";
                 lblReaderInfoTake.Text = brief;
                 lblReaderInfoReturn.Text = brief;
+                lblReaderInfoTake.Visible = true;
+                lblReaderInfoReturn.Visible = true;
             }
             else
             {
@@ -813,15 +743,48 @@ namespace LibraryTerminal
             {
                 Switch(Screen.S3_WaitBookTake, panelScanBook);
                 SetReaderHeader(lblReaderInfoTake.Text, isReturn: false);
+                lblReaderInfoTake.Visible = true; // ← на всякий
             }
             else if (_screen == Screen.S4_WaitCardReturn)
             {
                 Switch(Screen.S5_WaitBookReturn, panelScanBookReturn);
                 SetReaderHeader(lblReaderInfoReturn.Text, isReturn: true);
+                lblReaderInfoReturn.Visible = true; // ← на всякий
             }
         }
 
-        // ===== КНИЖНЫЕ ПОТОКИ (без изменений) =====
+        // ---------- UHFReader09 как ридер карты ----------
+        private void OnUhfCardUid(string epcHex)
+        {
+            if (InvokeRequired) { BeginInvoke(new Action<string>(OnUhfCardUid), epcHex); return; }
+
+            var uid = EpcToCardUid(epcHex);
+
+            // авторизуем только когда экран ждёт карту
+            if (_screen == Screen.S2_WaitCardTake || _screen == Screen.S4_WaitCardReturn)
+                OnAnyCardUid(uid, "UHF09");
+
+            // для отладки покажем, что считалось
+            try
+            {
+                lblReaderInfoTake.Text = $"[UHF09] UID: {uid}";
+                lblReaderInfoReturn.Text = $"[UHF09] UID: {uid}";
+            } catch { }
+        }
+
+        // Правило преобразования EPC → UID (управляется через App.config: UhfCardUidLength)
+        private static string EpcToCardUid(string epc)
+        {
+            if (string.IsNullOrWhiteSpace(epc)) return "";
+            var hex = new string(epc.Where(Uri.IsHexDigit).Select(char.ToUpperInvariant).ToArray());
+
+            // 0 = брать весь EPC; по умолчанию берём первые 24
+            int want = int.TryParse(ConfigurationManager.AppSettings["UhfCardUidLength"], out var w) ? w : 24;
+            if (want > 0 && hex.Length >= want) return hex.Substring(0, want);
+            return hex;
+        }
+
+        // ===== КНИЖНЫЕ ПОТОКИ (как были) =====
         private void StartBookFlowIfFree(string rawTagOrEpc, bool isReturn)
         {
             var bookKey = ResolveBookKey(rawTagOrEpc);
@@ -1502,7 +1465,7 @@ namespace LibraryTerminal
             }
         }
 
-        // ★ NEW: общий хелпер для текста успеха с MFN и кратким описанием
+
         private void SetSuccessWithMfn(string action, int mfn)
         {
             try
@@ -1517,7 +1480,7 @@ namespace LibraryTerminal
             }
         }
 
-        // --- простой статус в заголовке окна
+
         private void ShowStatus(string text)
         {
             try { this.Text = string.IsNullOrWhiteSpace(text) ? "Терминал библиотеки" : $"Терминал — {text}"; } catch { }

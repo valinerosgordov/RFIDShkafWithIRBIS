@@ -8159,3 +8159,14 @@
 [2025-10-09 10:23:42] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x80
 [2025-10-09 10:23:44] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x01
 [2025-10-09 10:23:47] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x0F
+[2025-10-09 12:39:14] OpenComPort: COM5 @ 57600, ADR=0x00
+[2025-10-09 12:39:14] OpenComPort -> ret=0, frmIdx=5, ADR(now)=0x00
+[2025-10-09 12:39:15] RRU ready (command-mode): COM5 @ 57600, adr=0x00
+[2025-10-09 12:39:17] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x01
+[2025-10-09 12:39:19] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x0F
+[2025-10-09 12:39:22] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x80
+[2025-10-09 12:39:24] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x01
+[2025-10-09 12:39:26] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x0F
+[2025-10-09 12:39:30] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x80
+[2025-10-09 12:39:33] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x01
+[2025-10-09 12:39:35] Inventory_G2: ret=1, Totallen=0, CardNum=0, InAnt=0x0F
