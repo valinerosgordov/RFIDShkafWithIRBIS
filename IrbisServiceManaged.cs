@@ -23,6 +23,7 @@ namespace LibraryTerminal
 
         // ★ Удобные свойства конфигурации
         private string BooksDb => ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS";
+
         private string ReadersDb => ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
         private string BookBriefFormat => ConfigurationManager.AppSettings["BookBriefFormat"] ?? "@brief";
         public string ConnectionString => _lastConnectionString;
@@ -154,6 +155,7 @@ namespace LibraryTerminal
                 }
             }
         }
+
         private static string InsertEvery2(string hex, string sep)
         {
             var sb = new StringBuilder(hex.Length + hex.Length / 2);
@@ -165,6 +167,7 @@ namespace LibraryTerminal
             }
             return sb.ToString();
         }
+
         private static string ReverseByByte(string hex)
         {
             var sb = new StringBuilder(hex.Length);

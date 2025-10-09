@@ -52,8 +52,8 @@ C:\SideProjects\RFIDShkafWithIRBIS\bin\Build\PCSC.Iso7816.pdb
 C:\SideProjects\RFIDShkafWithIRBIS\bin\Build\PCSC.Iso7816.xml
 C:\SideProjects\RFIDShkafWithIRBIS\obj\Build\LibraryTerminal.csproj.AssemblyReference.cache
 C:\SideProjects\RFIDShkafWithIRBIS\obj\Build\LibraryTerminal.exe.config
-C:\SideProjects\RFIDShkafWithIRBIS\obj\Build\LibraryTerminal.Logger.resources
 C:\SideProjects\RFIDShkafWithIRBIS\obj\Build\LibraryTerminal.csproj.GenerateResource.cache
 C:\SideProjects\RFIDShkafWithIRBIS\obj\Build\LibraryTerminal.csproj.CoreCompileInputs.cache
 C:\SideProjects\RFIDShkafWithIRBIS\obj\Build\LibraryT.18F57315.Up2Date
 C:\SideProjects\RFIDShkafWithIRBIS\obj\Build\LibraryTerminal.exe
+C:\SideProjects\RFIDShkafWithIRBIS\obj\Build\LibraryTerminal.UhfReader09Reader.resources

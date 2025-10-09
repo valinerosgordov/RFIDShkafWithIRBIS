@@ -41,9 +41,12 @@ namespace LibraryTerminal
             byte Target, byte InAnt, byte Scantime, byte FastFlag,
             byte[] pEPCList, ref byte Ant, ref int Totallen, ref int CardNum,
             int frmComPortindex);
+
         // =======================================
 
-        public Rru9816Reader() { }
+        public Rru9816Reader()
+        { }
+
         public Rru9816Reader(string comPort, int baud, byte comAdr)
         {
             int p = ExtractPortNumber(comPort);
@@ -171,6 +174,7 @@ namespace LibraryTerminal
             if (s.StartsWith("COM")) s = s.Substring(3);
             int n; return int.TryParse(s, out n) ? n : 0;
         }
+
         private static byte BaudToCode(int baud)
         {
             switch (baud)
@@ -182,6 +186,7 @@ namespace LibraryTerminal
                 default: return 3;
             }
         }
+
         private static int CodeToBaud(byte code)
         {
             switch (code)
@@ -193,6 +198,7 @@ namespace LibraryTerminal
                 default: return 57600;
             }
         }
+
         private static void NudgeLines(string portName, int baud)
         {
             var sp = new System.IO.Ports.SerialPort(portName, baud,
@@ -207,6 +213,7 @@ namespace LibraryTerminal
             try { sp.Open(); Thread.Sleep(120); } catch { }
             finally { try { if (sp.IsOpen) sp.Close(); } catch { } sp.Dispose(); }
         }
+
         private static string LogsDir()
         {
             try
@@ -216,6 +223,7 @@ namespace LibraryTerminal
                 return d;
             } catch { return AppDomain.CurrentDomain.BaseDirectory; }
         }
+
         private static void Log(string msg)
         {
             try
@@ -225,6 +233,7 @@ namespace LibraryTerminal
                 File.AppendAllText(p, line + Environment.NewLine, Encoding.UTF8);
             } catch { }
         }
+
         private static string BytesToHex(byte[] arr)
         {
             var sb = new StringBuilder(arr.Length * 2);

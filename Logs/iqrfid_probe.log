@@ -1,0 +1,23 @@
+﻿PROBE DONE
+PROBE ERR: Value cannot be null.
+Parameter name: PortName
+PROBE ERR: The given port name does not start with COM/com or does not resolve to a valid serial port.
+Parameter name: portName
+PROBE ERR: Access to the port 'COM7' is denied.
+PROBE DONE
+PROBE DONE
+PROBE DONE
+PROBE ERR: Value cannot be null.
+Parameter name: PortName
+PROBE ERR: Value cannot be null.
+Parameter name: PortName
+PROBE DONE
+PROBE ERR: Access to the port 'COM7' is denied.
+PROBE DONE
+PROBE ERR: Access to the port 'COM7' is denied.
+PROBE DONE
+PROBE DONE
+PROBE DONE
+PROBE DONE
+PROBE DONE
+PROBE DONE

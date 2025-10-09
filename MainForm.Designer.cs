@@ -260,5 +260,6 @@ namespace LibraryTerminal
         // Инфо-строка о читателе (устанавливается из кода: ФИО/brief)
         private Label lblReaderInfoTake;
         private Label lblReaderInfoReturn;
+        
     }
 }

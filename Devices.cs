@@ -1,7 +1,7 @@
 ﻿using System;
-using System.IO.Ports;
-using System.Text;
 using System.Threading;
+using System.Text.RegularExpressions;
+using System.Configuration;
 
 namespace LibraryTerminal
 {
@@ -14,22 +14,109 @@ namespace LibraryTerminal
         private string _last;
         private DateTime _lastAt;
 
-        public CardReaderSerial(string port, int baud, string newline, int readTimeoutMs, int writeTimeoutMs, int reconnectDelayMs, int debounceMs)
-            : base(port, baud, newline, readTimeoutMs, writeTimeoutMs, reconnectDelayMs)
+        public CardReaderSerial(
+            string port,
+            int baud,
+            string newline,
+            int readTimeoutMs,
+            int writeTimeoutMs,
+            int autoReconnectMs,
+            int debounceMs)
+            : base(port, baud, newline, readTimeoutMs, writeTimeoutMs, autoReconnectMs)
         {
-            _debounceMs = debounceMs;
+            _debounceMs = debounceMs > 0 ? debounceMs : 250;
         }
 
-        protected override void OnOpened() { }
-        protected override void OnClosed(Exception ex) { }
+        // === Инициализация ридера после открытия порта (по желанию из App.config) ===
+        protected override void OnOpened()
+        {
+            // отправим иниц. команду, если задана
+            var initCmd = System.Configuration.ConfigurationManager.AppSettings["IqrfidInitCmd"];
+            int initDelayMs;
+            if (!string.IsNullOrWhiteSpace(initCmd))
+            {
+                var beforeStr = System.Configuration.ConfigurationManager.AppSettings["IqrfidInitDelayBeforeMs"] ?? "100";
+                var afterStr = System.Configuration.ConfigurationManager.AppSettings["IqrfidInitDelayAfterMs"] ?? "100";
+                if (int.TryParse(beforeStr, out initDelayMs) && initDelayMs > 0) Thread.Sleep(initDelayMs);
 
+                // отправляем как строку (уйдёт с NewLine SerialPort'а)
+                try { WriteLineSafe(initCmd); } catch { }
+
+                if (int.TryParse(afterStr, out initDelayMs) && initDelayMs > 0) Thread.Sleep(initDelayMs);
+            }
+
+            SafeLog("IQRFID OPENED");
+        }
+
+        protected override void OnClosed(Exception ex)
+        {
+            SafeLog("IQRFID CLOSED" + (ex != null ? (": " + ex.Message) : ""));
+        }
+
+        // === Пришло что-то из COM — парсим UID читательского билета ===
         protected override void OnLine(string line)
         {
-            var uid = line.Trim(); // при необходимости парсить
+            if (string.IsNullOrWhiteSpace(line)) return;
+
+            // схлопываем разделители, если ридер присылает "04 A1-B2:C3"
+            var collapsed = System.Text.RegularExpressions.Regex.Replace(line, @"[\s:\-]", "");
+
+            // минимальная длина UID из конфига, по умолчанию 6
+            int minHexLen = 6;
+            int.TryParse(System.Configuration.ConfigurationManager.AppSettings["MinUidHexLen"] ?? "6", out minHexLen);
+
+            string uid = null;
+            // если вся строка — hex (минимум minHexLen) — берём её, иначе вытащим первую hex-подстроку
+            if (collapsed.Length >= minHexLen && IsHex(collapsed))
+            {
+                uid = collapsed;
+            }
+            else
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(line, @"(?i)\b([0-9A-F]{" + minHexLen + @",})\b");
+                if (m.Success) uid = m.Groups[1].Value;
+            }
+
+            if (string.IsNullOrEmpty(uid)) return;
+
+            // нормализация под конфиг
+            bool strip = "true".Equals(System.Configuration.ConfigurationManager.AppSettings["UidStripDelimiters"] ?? "true",
+                                       StringComparison.OrdinalIgnoreCase);
+            if (strip) uid = System.Text.RegularExpressions.Regex.Replace(uid, @"[\s:\-]", "");
+
+            uid = System.Text.RegularExpressions.Regex.Replace(uid, @"[^0-9A-Fa-f]", "");
+
+            bool upper = "true".Equals(System.Configuration.ConfigurationManager.AppSettings["UidUpperHex"] ?? "true",
+                                       StringComparison.OrdinalIgnoreCase);
+            if (upper) uid = uid.ToUpperInvariant();
+
+            // антидребезг
             var now = DateTime.UtcNow;
             if (_last == uid && (now - _lastAt).TotalMilliseconds < _debounceMs) return;
             _last = uid; _lastAt = now;
-            OnUid?.Invoke(uid);
+
+            try { OnUid?.Invoke(uid); } catch { }
+            SafeLog("UID: " + uid);
+
+            // локальная проверка
+            bool IsHex(string s)
+            {
+                for (int i = 0; i < s.Length; i++)
+                {
+                    char c = s[i];
+                    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+                        return false;
+                }
+                return true;
+            }
+        }
+
+        private static void SafeLog(string msg)
+        {
+            try
+            {
+                Logger.Append("iqrfid.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}");
+            } catch { }
         }
     }
 
@@ -48,8 +135,11 @@ namespace LibraryTerminal
             _debounceMs = debounceMs;
         }
 
-        protected override void OnOpened() { }
-        protected override void OnClosed(Exception ex) { }
+        protected override void OnOpened()
+        { }
+
+        protected override void OnClosed(Exception ex)
+        { }
 
         protected override void OnLine(string line)
         {

@@ -1,6 +1,4 @@
-﻿using System.Configuration;
-
-namespace LibraryTerminal
+﻿namespace LibraryTerminal
 {
     public sealed class ArduinoSerial : IArduino
     {
@@ -34,7 +32,9 @@ namespace LibraryTerminal
         }
 
         public void Ok() => Send("OK");
+
         public void Error() => Send("ERR");
+
         public void Beep(int ms = 120) => Send($"BEEP:{ms}");
 
         public void Dispose()

@@ -10,8 +10,12 @@
         }
 
         public void Ok() => Send("OK");
+
         public void Error() => Send("ERR");
+
         public void Beep(int ms = 120) => Send($"BEEP:{ms}");
-        public void Dispose() { }
+
+        public void Dispose()
+        { }
     }
 }

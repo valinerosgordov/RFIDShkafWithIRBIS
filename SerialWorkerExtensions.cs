@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace LibraryTerminal
+﻿namespace LibraryTerminal
 {
     internal static class SerialWorkerExtensions
     {
