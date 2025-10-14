@@ -82,7 +82,7 @@ namespace LibraryTerminal
                             i += 1 + len;
                         }
                     }
-                } catch { /* лог при желании */ }
+                } catch { /* можно доп. лог ставить */ }
 
                 if (periodMs > 0) { try { Task.Delay(periodMs, ct).Wait(ct); } catch { } }
             }
@@ -671,8 +671,6 @@ namespace LibraryTerminal
         }
 
         // ---------- пункты меню ----------
-        // Нижняя плашка для ручного ввода номера билета
-      
         private void btnTakeBook_Click(object sender, EventArgs e)
         {
             _mode = Mode.Take;
@@ -1436,6 +1434,47 @@ namespace LibraryTerminal
             try { if (lbl != null) lbl.Text = text ?? ""; } catch { }
         }
 
+        private string GetTitleAndAuthorOnly(string brief)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(brief)) return "";
+                var s = brief.Replace("\r", " ").Replace("\n", " ").Trim();
+
+                // Ищем разделитель авторов " / "
+                int slash = s.IndexOf(" / ");
+                string titlePart = s;
+                string authors = "";
+                if (slash >= 0)
+                {
+                    titlePart = s.Substring(0, slash);
+                    // Авторы идут до " ;" или до ", " (год и пр.)
+                    string rest = s.Substring(slash + 3);
+                    int semi = rest.IndexOf(" ;");
+                    int comma = rest.IndexOf(", ");
+                    int end = -1;
+                    if (semi >= 0) end = semi;
+                    else if (comma >= 0) end = comma;
+                    authors = (end >= 0 ? rest.Substring(0, end) : rest).Trim();
+                }
+
+                // Убираем ведущего автора из начала (шаблон "Автор. Название")
+                int dot = titlePart.IndexOf(". ");
+                if (dot >= 0 && dot + 2 < titlePart.Length)
+                    titlePart = titlePart.Substring(dot + 2).Trim();
+
+                if (string.IsNullOrWhiteSpace(titlePart))
+                    titlePart = s; //fallback
+
+                return !string.IsNullOrWhiteSpace(authors)
+                    ? $"{titlePart} / {authors}"
+                    : titlePart;
+            } catch
+            {
+                return brief ?? "";
+            }
+        }
+
         private async Task ShowBookInfoOnLabel(ManagedClient.IrbisRecord rec, bool takeMode)
         {
             try
@@ -1465,22 +1504,29 @@ namespace LibraryTerminal
             }
         }
 
-
+        // ★ NEW: общий хелпер для текста успеха с MFN и кратким описанием
         private void SetSuccessWithMfn(string action, int mfn)
         {
             try
             {
                 if (!string.IsNullOrWhiteSpace(_lastBookBrief))
-                    lblSuccess.Text = $"{action}\r\nMFN книги: {mfn}\r\n{_lastBookBrief}";
+                {
+                    var minimal = GetTitleAndAuthorOnly(_lastBookBrief);
+                    lblSuccess.Text = $"{action}\r\nMFN книги: {mfn}\r\n{minimal}";
+                }
                 else
+                {
                     lblSuccess.Text = $"{action}\r\nMFN книги: {mfn}";
+                }
             } catch
             {
-                lblSuccess.Text = $"{action} (MFN {mfn})";
+                lblSuccess.Text = $"{action}\r\nMFN книги: {mfn}";
             }
         }
 
+        
 
+        // --- простой статус в заголовке окна
         private void ShowStatus(string text)
         {
             try { this.Text = string.IsNullOrWhiteSpace(text) ? "Терминал библиотеки" : $"Терминал — {text}"; } catch { }
