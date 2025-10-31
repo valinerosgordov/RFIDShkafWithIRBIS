@@ -157,3 +157,15 @@
 [2025-10-14 16:32:37] CMD: OPEN_BIN
 [2025-10-14 16:32:37] TX: OK
 [2025-10-14 16:32:37] TX: BEEP:120
+[2025-10-30 22:38:47] INIT: enable=False — working in NULL mode (only logging)
+[2025-10-30 22:40:06] INIT: enable=False — working in NULL mode (only logging)
+[2025-10-30 22:40:33] INIT: enable=False — working in NULL mode (only logging)
+[2025-10-30 22:40:42] TX: ERR
+[2025-10-30 22:40:58] TX: ERR
+[2025-10-30 22:43:52] TX: ERR
+[2025-10-30 22:44:44] INIT: enable=False — working in NULL mode (only logging)
+[2025-10-30 22:44:52] TX: ERR
+[2025-10-30 22:46:22] INIT: enable=False — working in NULL mode (only logging)
+[2025-10-30 22:46:28] CMD: OPEN_BIN
+[2025-10-30 22:46:28] TX: OK
+[2025-10-30 22:46:28] TX: BEEP:120
