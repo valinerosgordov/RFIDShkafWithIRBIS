@@ -223,3 +223,67 @@
 [2025-12-23 12:47:15] TX: ERR
 [2025-12-23 16:42:15] INIT: enable=True, port=COM10, baud=115200, nl=\n
 [2025-12-23 16:42:15] OPENED
+[2025-12-26 11:13:00] INIT: enable=True, port=COM10, baud=115200, nl=\n
+[2025-12-26 11:13:00] OPENED
+[2025-12-26 11:53:27] INIT: enable=True, port=COM10, baud=115200, nl=\n
+[2025-12-26 11:53:27] OPENED
+[2025-12-26 11:56:14] INIT: enable=True, port=COM10, baud=115200, nl=\n
+[2025-12-26 11:56:14] OPENED
+[2025-12-26 11:56:14] INIT: enable=True, port=COM10, baud=115200, nl=\n
+[2025-12-26 11:56:14] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:17] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:20] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:23] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:26] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:29] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:32] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:35] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:38] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:41] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:44] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:47] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:50] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:53] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:56] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:56:59] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:02] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:05] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:08] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:11] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:14] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:17] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:20] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:23] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:26] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:29] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:32] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:35] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:38] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:41] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:44] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:47] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:50] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:53] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:56] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:57:59] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:58:02] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:58:05] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:58:08] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:58:11] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 11:58:14] CLOSED: Access to the port 'COM10' is denied.
+[2025-12-26 12:31:50] INIT: enable=True, port=COM10, baud=115200, nl=\n
+[2025-12-26 12:31:50] OPENED
+[2025-12-26 12:34:55] INIT: enable=True, port=COM10, baud=115200, nl=\n
+[2025-12-26 12:34:55] OPENED
+[2025-12-26 12:36:18] CMD: OPEN_BIN
+[2025-12-26 12:36:18] >> OPENBIN (sync)
+[2025-12-26 12:36:33] OPEN_BIN_ERR: No response for OPENBIN
+[2025-12-26 12:36:33] TX: OK
+[2025-12-26 12:36:33] >> OK (async)
+[2025-12-26 12:36:33] TX: BEEP:120
+[2025-12-26 12:36:33] >> BEEP:120 (async)
+[2025-12-26 12:37:51] CMD: HAS_SPACE?
+[2025-12-26 12:37:51] >> SPACE? (sync)
+[2025-12-26 12:37:56] HAS_SPACE_ERR: No response for SPACE?
+[2025-12-26 12:37:56] TX: ERR
+[2025-12-26 12:37:56] >> ERR (async)

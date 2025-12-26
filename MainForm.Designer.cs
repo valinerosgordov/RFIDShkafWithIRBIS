@@ -211,7 +211,6 @@ namespace LibraryTerminal
             this.panelError.Visible = false;
             this.panelOverflow.Visible = false;
             this.panelNoTag.Visible = false;
-
             this.ResumeLayout(false);
         }
 
