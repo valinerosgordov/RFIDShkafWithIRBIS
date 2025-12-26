@@ -56,7 +56,7 @@ namespace LibraryTerminal
             this.Name = "MainForm";
             this.Text = "Library Terminal";
             this.KeyPreview = false;
-            this.DoubleBuffered = true; // меньше мерцаний
+            this.DoubleBuffered = true;
             this.Load += new System.EventHandler(this.MainForm_Load);
 
             // ========= Панель меню =========
@@ -74,18 +74,18 @@ namespace LibraryTerminal
             this.lblTitleMenu.Height = 160;
 
             // Кнопка «Взять книгу»
-            this.btnTakeBook.Size = new Size(450, 200);
+            this.btnTakeBook.Size = new Size(320, 80);
             this.btnTakeBook.Location = new Point((800 - 320) / 2, 200);
             this.btnTakeBook.Text = "📕 Взять книгу";
-            this.btnTakeBook.Font = new Font("Segoe UI", 25F, FontStyle.Bold);
+            this.btnTakeBook.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
             this.btnTakeBook.Click += new EventHandler(this.btnTakeBook_Click);
             this.btnTakeBook.Anchor = AnchorStyles.Top;
 
             // Кнопка «Вернуть книгу»
-            this.btnReturnBook.Size = new Size(450, 200);
+            this.btnReturnBook.Size = new Size(320, 80);
             this.btnReturnBook.Location = new Point((800 - 320) / 2, 300);
             this.btnReturnBook.Text = "📗 Вернуть книгу";
-            this.btnReturnBook.Font = new Font("Segoe UI", 25F, FontStyle.Bold);
+            this.btnReturnBook.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
             this.btnReturnBook.Click += new EventHandler(this.btnReturnBook_Click);
             this.btnReturnBook.Anchor = AnchorStyles.Top;
 
@@ -93,11 +93,10 @@ namespace LibraryTerminal
             this.panelMenu.Controls.Add(this.btnReturnBook);
             this.panelMenu.Controls.Add(this.lblTitleMenu);
 
-
             // Центрирование кнопок при изменении размера
             this.Resize += (_, __) => CenterMainButtons();
             this.panelMenu.Resize += (_, __) => CenterMainButtons();
-            CenterMainButtons(); // первичное позиционирование
+            CenterMainButtons();
 
             // ========= Остальные экраны =========
 
@@ -122,17 +121,15 @@ namespace LibraryTerminal
             this.panelScanBook.Size = new Size(800, 600);
             this.panelScanBook.Dock = DockStyle.Fill;
 
-            // строка с ФИО (выдача)
             this.lblReaderInfoTake.AutoSize = false;
             this.lblReaderInfoTake.Dock = DockStyle.Top;
             this.lblReaderInfoTake.Height = 72;
             this.lblReaderInfoTake.TextAlign = ContentAlignment.MiddleCenter;
             this.lblReaderInfoTake.Font = new Font("Segoe UI", 14F, FontStyle.Regular);
             this.lblReaderInfoTake.ForeColor = Color.FromArgb(45, 45, 45);
-            this.lblReaderInfoTake.Text = "";             // имя читателя установит код
-            this.lblReaderInfoTake.Visible = false;       // скрыто до идентификации
+            this.lblReaderInfoTake.Text = "";
+            this.lblReaderInfoTake.Visible = false;
 
-            // основной текст
             SetupBigLabel(this.lblScanBook, "Поднесите книгу к считывателю");
 
             this.panelScanBook.Controls.Add(this.lblScanBook);
@@ -152,7 +149,7 @@ namespace LibraryTerminal
             this.lblReaderInfoReturn.Font = new Font("Segoe UI", 14F, FontStyle.Regular);
             this.lblReaderInfoReturn.ForeColor = Color.FromArgb(45, 45, 45);
             this.lblReaderInfoReturn.Text = "";
-            this.lblReaderInfoReturn.Visible = false;     // скрыто до идентификации
+            this.lblReaderInfoReturn.Visible = false;
 
             SetupBigLabel(this.lblScanBookReturn, "Поднесите возвращаемую книгу к считывателю");
 
@@ -265,9 +262,7 @@ namespace LibraryTerminal
         private Label lblNoTag;
         private Label lblError;
 
-        // Инфо-строка о читателе (устанавливается из кода: ФИО/brief)
         private Label lblReaderInfoTake;
         private Label lblReaderInfoReturn;
-        
     }
 }

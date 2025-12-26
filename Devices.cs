@@ -5,7 +5,7 @@ using System.Configuration;
 
 namespace LibraryTerminal
 {
-    // ===== ЧИТАТЕЛЬСКИЕ КАРТЫ (низкочастотный/PCSC-эмуляция по COM) =====
+    // ===== ЧИТАТЕЛЬСКИЕ КАРТЫ (низкочастотный/PCSC-эмуляция по COM) кря кря кря =====
     internal class CardReaderSerial : SerialWorker
     {
         public event Action<string> OnUid;
@@ -152,12 +152,14 @@ namespace LibraryTerminal
     }
 
     // ===== АРДУИНО-ШКАФ =====
-    internal class ArduinoClientSerial : SerialWorker
+    internal class ArduinoClientSerial : SerialWorker, IArduino
     {
         private readonly int _syncTimeoutMs;
         private readonly AutoResetEvent _respEvent = new AutoResetEvent(false);
         private readonly object _respLock = new object();
         private string _lastResp;
+
+        public bool IsConnected => IsOpen;
 
         public ArduinoClientSerial(string port, int baud, string newline, int readTimeoutMs, int writeTimeoutMs, int reconnectDelayMs)
             : base(port, baud, newline, readTimeoutMs, writeTimeoutMs, reconnectDelayMs)
@@ -185,6 +187,7 @@ namespace LibraryTerminal
             }
         }
 
+        // === Синхронные команды (с ожиданием ответа) ===
         public bool HasSpace()
         {
             var resp = Request("SPACE?", _syncTimeoutMs);
@@ -200,11 +203,92 @@ namespace LibraryTerminal
                 throw new InvalidOperationException("Cabinet responded: " + (resp ?? "<empty>"));
         }
 
+        // === Асинхронные команды (без ожидания ответа) - реализация IArduino ===
+        public new void Send(string cmd)
+        {
+            if (string.IsNullOrWhiteSpace(cmd)) return;
+            SafeLog($">> {cmd} (async)");
+            WriteLineSafe(cmd);
+        }
+
+        public void Ok() => Send("OK");
+
+        public void Error() => Send("ERR");
+
+        public void Beep(int ms = 120) => Send($"BEEP:{ms}");
+
+        // === Бинарные команды управления шкафом (формат из control.pb) ===
+        // Пакет: FF, CMD, fromX, fromY, toX, toY, sizeX, sizeY (8 байт)
+
+        /// <summary>
+        /// Базовый метод отправки бинарного пакета управления шкафом.
+        /// Формат: FF, CMD, fromX, fromY, toX, toY, sizeX, sizeY (8 байт).
+        /// </summary>
+        private void SendControlPacket(byte command, byte fromX, byte fromY, byte toX, byte toY, byte sizeX, byte sizeY)
+        {
+            var buf = new byte[8];
+            buf[0] = 0xFF;  // Reset byte
+            buf[1] = command;
+            buf[2] = fromX;
+            buf[3] = fromY;
+            buf[4] = toX;
+            buf[5] = toY;
+            buf[6] = sizeX;
+            buf[7] = sizeY;
+
+            string cmdName = GetCommandName(command);
+            SafeLog($">> BIN {cmdName}: FF {command:X2} from({fromX},{fromY}) to({toX},{toY}) size({sizeX},{sizeY})");
+            WriteRaw(buf, 0, buf.Length);
+        }
+
+        private static string GetCommandName(byte cmd)
+        {
+            switch (cmd)
+            {
+                case 0x00: return "INIT";
+                case 0x02: return "GIVEFRONT";
+                case 0x03: return "TAKEFRONT";
+                case 0x04: return "GIVEBACK";
+                case 0x05: return "TAKEBACK";
+                default: return $"CMD_{cmd:X2}";
+            }
+        }
+
+        /// <summary>Инициализация шкафа (команда 0x00).</summary>
+        public void Init(byte fromX, byte fromY, byte toX, byte toY, byte sizeX, byte sizeY)
+        {
+            SendControlPacket(0x00, fromX, fromY, toX, toY, sizeX, sizeY);
+        }
+
+        /// <summary>Выдача книги на переднюю сторону (команда 0x02).</summary>
+        public void GiveFront(byte fromX, byte fromY, byte toX, byte toY, byte sizeX, byte sizeY)
+        {
+            SendControlPacket(0x02, fromX, fromY, toX, toY, sizeX, sizeY);
+        }
+
+        /// <summary>Взятие книги с передней стороны (команда 0x03).</summary>
+        public void TakeFront(byte fromX, byte fromY, byte toX, byte toY, byte sizeX, byte sizeY)
+        {
+            SendControlPacket(0x03, fromX, fromY, toX, toY, sizeX, sizeY);
+        }
+
+        /// <summary>Выдача книги на заднюю сторону (команда 0x04).</summary>
+        public void GiveBack(byte fromX, byte fromY, byte toX, byte toY, byte sizeX, byte sizeY)
+        {
+            SendControlPacket(0x04, fromX, fromY, toX, toY, sizeX, sizeY);
+        }
+
+        /// <summary>Взятие книги с задней стороны (команда 0x05).</summary>
+        public void TakeBack(byte fromX, byte fromY, byte toX, byte toY, byte sizeX, byte sizeY)
+        {
+            SendControlPacket(0x05, fromX, fromY, toX, toY, sizeX, sizeY);
+        }
+
         // ---- helpers ----
         private string Request(string cmd, int timeoutMs)
         {
-            SafeLog($">> {cmd}");
-            this.WriteLineSafe(cmd); // безопасно отправляем строку с NewLine (extension)
+            SafeLog($">> {cmd} (sync)");
+            WriteLineSafe(cmd);
             if (!_respEvent.WaitOne(timeoutMs))
                 throw new TimeoutException("No response for " + cmd);
 

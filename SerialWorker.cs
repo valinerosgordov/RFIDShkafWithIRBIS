@@ -272,6 +272,14 @@ namespace LibraryTerminal
             try { spLocal.WriteLine(text ?? ""); } catch { }
         }
 
+        // Отправка «сырых» байтов без добавления разделителей
+        protected void WriteRaw(byte[] data, int offset, int count)
+        {
+            var spLocal = _sp;
+            if (spLocal == null || !spLocal.IsOpen || data == null) return;
+            try { spLocal.Write(data, offset, count); } catch { }
+        }
+
         public void Write(string text)
         {
             var spLocal = _sp;
