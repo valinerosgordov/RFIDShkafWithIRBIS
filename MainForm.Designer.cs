@@ -74,22 +74,30 @@ namespace LibraryTerminal
             this.lblTitleMenu.Height = 160;
 
             // Кнопка «Взять книгу»
-            this.btnTakeBook.Size = new Size(320, 80);
+            this.btnTakeBook.Size = new Size(450, 200);
             this.btnTakeBook.Location = new Point((800 - 320) / 2, 200);
             this.btnTakeBook.Text = "📕 Взять книгу";
-            this.btnTakeBook.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+            this.btnTakeBook.Font = new Font("Segoe UI", 25F, FontStyle.Bold);
             this.btnTakeBook.Click += new EventHandler(this.btnTakeBook_Click);
+            this.btnTakeBook.Anchor = AnchorStyles.Top;
 
             // Кнопка «Вернуть книгу»
-            this.btnReturnBook.Size = new Size(320, 80);
+            this.btnReturnBook.Size = new Size(450, 200);
             this.btnReturnBook.Location = new Point((800 - 320) / 2, 300);
             this.btnReturnBook.Text = "📗 Вернуть книгу";
-            this.btnReturnBook.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+            this.btnReturnBook.Font = new Font("Segoe UI", 25F, FontStyle.Bold);
             this.btnReturnBook.Click += new EventHandler(this.btnReturnBook_Click);
+            this.btnReturnBook.Anchor = AnchorStyles.Top;
 
             this.panelMenu.Controls.Add(this.btnTakeBook);
             this.panelMenu.Controls.Add(this.btnReturnBook);
             this.panelMenu.Controls.Add(this.lblTitleMenu);
+
+
+            // Центрирование кнопок при изменении размера
+            this.Resize += (_, __) => CenterMainButtons();
+            this.panelMenu.Resize += (_, __) => CenterMainButtons();
+            CenterMainButtons(); // первичное позиционирование
 
             // ========= Остальные экраны =========
 

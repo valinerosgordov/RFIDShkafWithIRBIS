@@ -169,3 +169,57 @@
 [2025-10-30 22:46:28] CMD: OPEN_BIN
 [2025-10-30 22:46:28] TX: OK
 [2025-10-30 22:46:28] TX: BEEP:120
+[2025-10-31 12:55:15] INIT: enable=False — working in NULL mode (only logging)
+[2025-10-31 12:57:27] TX: ERR
+[2025-10-31 12:57:40] INIT: enable=False — working in NULL mode (only logging)
+[2025-10-31 12:57:55] CMD: OPEN_BIN
+[2025-10-31 12:57:55] TX: OK
+[2025-10-31 12:57:55] TX: BEEP:120
+[2025-10-31 13:00:53] INIT: enable=False — working in NULL mode (only logging)
+[2025-10-31 13:04:38] INIT: enable=False — working in NULL mode (only logging)
+[2025-10-31 13:04:56] CMD: OPEN_BIN
+[2025-10-31 13:04:56] TX: OK
+[2025-10-31 13:04:56] TX: BEEP:120
+[2025-10-31 13:06:07] CMD: OPEN_BIN
+[2025-10-31 13:06:07] TX: OK
+[2025-10-31 13:06:07] TX: BEEP:120
+[2025-11-10 11:08:22] INIT: enable=False — working in NULL mode (only logging)
+[2025-11-10 11:08:52] INIT: enable=False — working in NULL mode (only logging)
+[2025-11-10 11:23:09] INIT: enable=False — working in NULL mode (only logging)
+[2025-11-10 11:40:52] INIT: enable=False — working in NULL mode (only logging)
+[2025-11-10 11:42:53] INIT: enable=False — working in NULL mode (only logging)
+[2025-11-10 11:43:31] INIT: enable=False — working in NULL mode (only logging)
+[2025-11-10 11:44:03] INIT: enable=False — working in NULL mode (only logging)
+[2025-11-10 11:45:32] INIT: enable=False — working in NULL mode (only logging)
+[2025-11-10 11:54:22] INIT: enable=False — working in NULL mode (only logging)
+[2025-12-10 11:00:44] INIT: enable=False — working in NULL mode (only logging)
+[2025-12-10 11:01:32] TX: ERR
+[2025-12-10 11:02:04] INIT: enable=False — working in NULL mode (only logging)
+[2025-12-10 11:02:27] TX: ERR
+[2025-12-10 11:07:44] CMD: HAS_SPACE?
+[2025-12-10 11:07:44] HAS_SPACE: assume TRUE (no hardware)
+[2025-12-10 11:07:45] CMD: OPEN_BIN
+[2025-12-10 11:07:45] TX: OK
+[2025-12-10 11:07:45] TX: BEEP:120
+[2025-12-10 11:11:37] CMD: OPEN_BIN
+[2025-12-10 11:11:37] TX: OK
+[2025-12-10 11:11:37] TX: BEEP:120
+[2025-12-10 11:11:55] CMD: HAS_SPACE?
+[2025-12-10 11:11:55] HAS_SPACE: assume TRUE (no hardware)
+[2025-12-10 11:11:56] CMD: OPEN_BIN
+[2025-12-10 11:11:56] TX: OK
+[2025-12-10 11:11:56] TX: BEEP:120
+[2025-12-10 11:22:28] INIT: enable=False — working in NULL mode (only logging)
+[2025-12-23 12:41:09] INIT: enable=False — working in NULL mode (only logging)
+[2025-12-23 12:43:37] INIT: enable=True, port=COM10, baud=115200, nl=\n
+[2025-12-23 12:43:37] OPENED
+[2025-12-23 12:44:01] TX: ERR
+[2025-12-23 12:46:03] INIT: enable=True, port=COM10, baud=115200, nl=\n
+[2025-12-23 12:46:03] OPENED
+[2025-12-23 12:46:28] TX: ERR
+[2025-12-23 12:47:10] CMD: HAS_SPACE?
+[2025-12-23 12:47:10] >> SPACE?
+[2025-12-23 12:47:15] HAS_SPACE_ERR: No response for SPACE?
+[2025-12-23 12:47:15] TX: ERR
+[2025-12-23 16:42:15] INIT: enable=True, port=COM10, baud=115200, nl=\n
+[2025-12-23 16:42:15] OPENED

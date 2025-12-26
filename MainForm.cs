@@ -257,6 +257,34 @@ namespace LibraryTerminal
             this.KeyPreview = false;
         }
 
+        // Центрируем кнопки главного меню при любом размере окна
+        private void CenterMainButtons()
+        {
+            if (panelMenu == null || btnTakeBook == null || btnReturnBook == null) return;
+
+            // одинаковая ширина (по желанию — можно убрать)
+            int w = Math.Max(btnTakeBook.Width, btnReturnBook.Width);
+            btnTakeBook.Width = btnReturnBook.Width = w;
+
+            int spacing = 16; // зазор между кнопками
+
+            // центр по X
+            int left = Math.Max(0, (panelMenu.ClientSize.Width - w) / 2);
+
+            // учитываем высоту заголовка
+            int headerOffset = (lblTitleMenu != null ? lblTitleMenu.Bottom + 20 : 100);
+
+            // общая высота «стопки» кнопок
+            int totalH = btnTakeBook.Height + spacing + btnReturnBook.Height;
+
+            // центр по Y, но не выше заголовка
+            int topStart = Math.Max(headerOffset, (panelMenu.ClientSize.Height - totalH) / 2);
+
+            btnTakeBook.Location = new Point(left, topStart);
+            btnReturnBook.Location = new Point(left, btnTakeBook.Bottom + spacing);
+        }
+
+
         private static readonly bool BYPASS_CARD =
             (ConfigurationManager.AppSettings["BypassCardForRruTest"] ?? "false")
             .Equals("true", StringComparison.OrdinalIgnoreCase);
@@ -265,11 +293,11 @@ namespace LibraryTerminal
         {
             var cfg = ConfigurationManager.AppSettings["ConnectionString"] ?? ConfigurationManager.AppSettings["connection-string"];
             if (!string.IsNullOrWhiteSpace(cfg)) return cfg;
-            return "host=127.0.0.1;port=6666;user=MASTER;password=MASTERKEY;db=IBIS;";
+            return "host=172.29.67.70;port=6666;user=09f00st;password=f00st;db=KAT%SERV09%;";
         }
 
         private static string GetBooksDb()
-        { return ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS"; }
+        { return ConfigurationManager.AppSettings["BooksDb"] ?? "KAT%SERV09%"; }
 
         protected override async void OnShown(EventArgs e)
         {
@@ -1236,7 +1264,7 @@ namespace LibraryTerminal
             {
                 if (mfn <= 0) return null;
 
-                var booksDb = ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS";
+                var booksDb = ConfigurationManager.AppSettings["BooksDb"] ?? "KAT%SERV09%";
                 var briefFmt = ConfigurationManager.AppSettings["BookBriefFormat"] ?? "@brief";
 
                 return await OffUi<string>(() => {
