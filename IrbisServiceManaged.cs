@@ -107,7 +107,7 @@ namespace LibraryTerminal
         }
 
         // === Нормализация идентификаторов (RFID/UID/EPC/инв.) ===
-        private static string NormalizeId(string s)
+        internal static string NormalizeId(string s)
         {
             if (string.IsNullOrWhiteSpace(s)) return null;
             s = s.Trim().Replace(" ", "").Replace("-", "").Replace(":", "");
@@ -308,59 +308,6 @@ namespace LibraryTerminal
             return false;
         }
 
-        /// <summary>Проверка по номеру читательского билета.</summary>
-        public bool ValidateReaderByTicketNumber(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value)) return false;
-
-            var raw = value.Trim();
-            var hexOnly = new string(raw.Where(Uri.IsHexDigit).Select(char.ToUpperInvariant).ToArray());
-            if (hexOnly.Length >= 8 && hexOnly.Length <= 32 && hexOnly.All(Uri.IsHexDigit))
-            {
-                LogIrbis($"TICKET looks like UID HEX -> fallback to ValidateCard(), val={raw}");
-                return ValidateCard(hexOnly);
-            }
-
-            string rdrDb = ReadersDb;
-            UseDatabase(rdrDb);
-
-            var patterns = new List<string>();
-            var listRaw = ConfigurationManager.AppSettings["ExprReaderByTicketList"];
-            if (!string.IsNullOrWhiteSpace(listRaw))
-                patterns.AddRange(listRaw.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()));
-
-            var single = ConfigurationManager.AppSettings["ExprReaderByTicket"];
-            if (!string.IsNullOrWhiteSpace(single))
-                patterns.Add(single.Trim());
-
-            if (patterns.Count == 0) patterns.Add("\"R={0}\"");
-
-            var candidates = new List<string>();
-            var digitsOnly = new string(raw.Where(char.IsDigit).ToArray());
-            candidates.Add(raw);
-            if (!string.IsNullOrEmpty(digitsOnly) && digitsOnly != raw) candidates.Add(digitsOnly);
-            if (digitsOnly.StartsWith("0") && digitsOnly.Length > 1) candidates.Add(digitsOnly.TrimStart('0'));
-
-            foreach (var val in candidates.Distinct())
-            {
-                foreach (var pat in patterns)
-                {
-                    var expr = string.Format(pat, val);
-                    LogIrbis($"TICKET TRY DB={rdrDb} PAT={pat} VAL={val}");
-                    var rec = FindOne(expr);
-                    if (rec != null)
-                    {
-                        LastReaderMfn = rec.Mfn;
-                        LogIrbis($"TICKET OK MFN={LastReaderMfn} via PAT={pat} VAL={val}");
-                        return true;
-                    }
-                }
-            }
-
-            LogIrbis("TICKET NOT FOUND for value=" + raw);
-            return false;
-        }
-
         /// <summary>
         /// Поиск книги по RFID-метке (910^h) в IBIS. Пробуем полный EPC-96 и «хвосты».
         /// </summary>
@@ -412,21 +359,6 @@ namespace LibraryTerminal
             return found;
         }
 
-        /// <summary>Универсальный поиск: если 24HEX — метка (по IN=), иначе по инвентарному.</summary>
-        public MarcRecord FindOneByInvOrTag(string value)
-        {
-            value = NormalizeId(value);
-            if (string.IsNullOrWhiteSpace(value)) return null;
-
-            string booksDb = BooksDb;
-            string exprInv = ConfigurationManager.AppSettings["ExprBookByInv"] ?? "\"IN={0}\"";
-            string exprTag = ConfigurationManager.AppSettings["ExprBookByRfid"] ?? "\"IN={0}\"";
-
-            bool looksLikeHex24 = value.Length == 24 && value.All(Uri.IsHexDigit);
-            var expr = string.Format(looksLikeHex24 ? exprTag : exprInv, value);
-
-            return WithDatabase(booksDb, delegate { return FindOne(expr); });
-        }
 
         /// <summary>
         /// Обновить статус экземпляра в 910 по RFID (910^h): ^A = "0" | "1".

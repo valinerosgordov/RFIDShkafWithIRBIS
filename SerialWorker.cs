@@ -57,6 +57,16 @@ namespace LibraryTerminal
         protected virtual void OnLine(string line) { }
         protected virtual void OnOpened() { }
         protected virtual void OnClosed(Exception ex) { }
+        
+        /// <summary>
+        /// Переопределите для настройки порта перед открытием (например, DTR/RTS для Arduino).
+        /// </summary>
+        protected virtual void ConfigurePort(SerialPort port) { }
+        
+        /// <summary>
+        /// Задержка после открытия порта в миллисекундах (для Arduino нужна инициализация).
+        /// </summary>
+        protected virtual int GetOpenDelayMs() { return 0; }
 
         public void Start()
         {
@@ -195,8 +205,16 @@ namespace LibraryTerminal
             sp.ReceivedBytesThreshold = 1;
             // === конец блока настроек ===
 
+            // Позволить наследникам настроить порт перед открытием
+            ConfigurePort(sp);
+
             // Открыть и очистить буферы
             sp.Open();
+            
+            // Задержка после открытия (для Arduino нужна инициализация)
+            int openDelay = GetOpenDelayMs();
+            if (openDelay > 0) Thread.Sleep(openDelay);
+            
             try { sp.DiscardInBuffer(); } catch { }
             try { sp.DiscardOutBuffer(); } catch { }
 

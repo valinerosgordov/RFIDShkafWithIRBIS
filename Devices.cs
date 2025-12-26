@@ -167,9 +167,33 @@ namespace LibraryTerminal
             _syncTimeoutMs = readTimeoutMs > 0 ? readTimeoutMs : 3000;
         }
 
+        /// <summary>
+        /// Настройка порта для Arduino: отключаем DTR/RTS, чтобы не перезагружать плату.
+        /// </summary>
+        protected override void ConfigurePort(System.IO.Ports.SerialPort port)
+        {
+            // Читаем настройки из конфига для Arduino
+            var dtrStr = System.Configuration.ConfigurationManager.AppSettings["ArduinoDtr"] ?? "false";
+            var rtsStr = System.Configuration.ConfigurationManager.AppSettings["ArduinoRts"] ?? "false";
+            
+            bool dtr; port.DtrEnable = bool.TryParse(dtrStr, out dtr) ? dtr : false;
+            bool rts; port.RtsEnable = bool.TryParse(rtsStr, out rts) ? rts : false;
+            
+            SafeLog($"CONFIG: DTR={port.DtrEnable}, RTS={port.RtsEnable}");
+        }
+
+        /// <summary>
+        /// Задержка после открытия порта - даёт Arduino время инициализироваться.
+        /// </summary>
+        protected override int GetOpenDelayMs()
+        {
+            var delayStr = System.Configuration.ConfigurationManager.AppSettings["ArduinoOpenDelayMs"] ?? "2000";
+            return int.TryParse(delayStr, out var delay) ? delay : 2000;
+        }
+
         protected override void OnOpened()
         {
-            SafeLog("OPENED");
+            SafeLog("OPENED (Arduino ready)");
         }
 
         protected override void OnClosed(Exception ex)
@@ -209,6 +233,10 @@ namespace LibraryTerminal
             if (string.IsNullOrWhiteSpace(cmd)) return;
             SafeLog($">> {cmd} (async)");
             WriteLineSafe(cmd);
+            
+            // Задержка после отправки текстовой команды
+            int cmdDelay = GetCommandDelayMs();
+            if (cmdDelay > 0) System.Threading.Thread.Sleep(cmdDelay);
         }
 
         public void Ok() => Send("OK");
@@ -239,6 +267,16 @@ namespace LibraryTerminal
             string cmdName = GetCommandName(command);
             SafeLog($">> BIN {cmdName}: FF {command:X2} from({fromX},{fromY}) to({toX},{toY}) size({sizeX},{sizeY})");
             WriteRaw(buf, 0, buf.Length);
+            
+            // Задержка после отправки команды - предотвращает переполнение буфера Arduino
+            int cmdDelay = GetCommandDelayMs();
+            if (cmdDelay > 0) System.Threading.Thread.Sleep(cmdDelay);
+        }
+        
+        private int GetCommandDelayMs()
+        {
+            var delayStr = System.Configuration.ConfigurationManager.AppSettings["ArduinoCommandDelayMs"] ?? "50";
+            return int.TryParse(delayStr, out var delay) ? delay : 50;
         }
 
         private static string GetCommandName(byte cmd)
@@ -289,6 +327,11 @@ namespace LibraryTerminal
         {
             SafeLog($">> {cmd} (sync)");
             WriteLineSafe(cmd);
+            
+            // Задержка после отправки команды
+            int cmdDelay = GetCommandDelayMs();
+            if (cmdDelay > 0) System.Threading.Thread.Sleep(cmdDelay);
+            
             if (!_respEvent.WaitOne(timeoutMs))
                 throw new TimeoutException("No response for " + cmd);
 

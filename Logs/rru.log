@@ -1035,3 +1035,7 @@
 [2025-12-26 12:37:50] [RRU EPC] 304DB75F196000090009A173
 [2025-12-26 12:37:50] [RRU EPC] 304DB75F196000090009A173
 [2025-12-26 12:37:51] [RRU EPC] 304DB75F196000090009A173
+[2025-12-26 20:15:38] RRU INIT EX: System.InvalidOperationException: RRU9816: OpenComPort failed (ret=48)
+   at LibraryTerminal.Rru9816Reader.Start()
+   at LibraryTerminal.MainForm.MainForm_Load(Object sender, EventArgs e)
+[2025-12-26 20:15:40] UHFReader09: AutoOpenComPort FAILED

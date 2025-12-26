@@ -127,13 +127,9 @@ namespace LibraryTerminal
             try { Append("arduino.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {line}"); } catch { }
         }
 
-        public static string Dir => _dir;
-
-        public static string PathFor(string fileName) => Path.Combine(_dir, fileName);
-
         public static void Append(string fileName, string line)
         {
-            try { File.AppendAllText(PathFor(fileName), line + Environment.NewLine, Encoding.UTF8); } catch { }
+            try { File.AppendAllText(Path.Combine(_dir, fileName), line + Environment.NewLine, Encoding.UTF8); } catch { }
         }
     }
 
@@ -157,11 +153,9 @@ namespace LibraryTerminal
         private DateTime? _deadline = null;
 
         // демо-флаги
-        private static bool _emu, _emuUI, _dk;
+        private static bool _emuUI, _dk;
 
-        private static readonly bool USE_EMULATOR = bool.TryParse(ConfigurationManager.AppSettings["UseEmulator"], out _emu) && _emu;
         private static readonly bool DEMO_UI = bool.TryParse(ConfigurationManager.AppSettings["UseEmulator"], out _emuUI) && _emuUI;
-        private static readonly bool DEMO_KEYS = bool.TryParse(ConfigurationManager.AppSettings["DemoKeys"], out _dk) && _dk;
 
         private static bool _forceCards;
 
@@ -198,7 +192,6 @@ namespace LibraryTerminal
         private CardReaderSerial _iqrfid;
 
         private string _lastBookTag = null;
-        private string _lastRruEpc = null;
 
         private volatile bool _bookScanBusy = false;
         private DateTime _lastBookAt = DateTime.MinValue;
@@ -219,15 +212,8 @@ namespace LibraryTerminal
         private int _lastBookMfn = 0;
         private string _lastBookBrief = "";
 
-        // alias
-        private Screen Screen_ScanTake { get { return Screen.S3_WaitBookTake; } }
-
         private static Task OffUi(Action a) => Task.Run(a);
         private static Task<T> OffUi<T>(Func<T> f) => Task.Run(f);
-
-        private int _currentBookMfn;
-        private string _currentBookBrief;
-        private string _currentBookInv;
 
         // ======== ARDUINO: команды ========
         private void LogArduino(string msg)
@@ -411,22 +397,6 @@ namespace LibraryTerminal
             return false;
         }
 
-        private async Task TestIrbisConnectionAsync()
-        {
-            try
-            {
-                string conn = GetConnString();
-                string db = GetBooksDb();
-
-                if (_svc == null) _svc = new IrbisServiceManaged();
-                await OffUi(delegate { try { _svc.UseDatabase(db); } catch { _svc.Connect(conn); _svc.UseDatabase(db); } });
-
-                MessageBox.Show("IRBIS: подключение успешно", "IRBIS", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            } catch (Exception ex)
-            {
-                MessageBox.Show("IRBIS: ошибка подключения\n" + ex.Message, "IRBIS", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
 
         private async Task EnsureIrbisConnectedAsync()
         {
@@ -783,7 +753,7 @@ namespace LibraryTerminal
             var bookKey = ResolveBookKey(rawTagOrEpc);
             if (string.IsNullOrWhiteSpace(bookKey)) return;
 
-            if (!isReturn && (_screen == Screen.S3_WaitBookTake || _screen == Screen_ScanTake))
+            if (!isReturn && _screen == Screen.S3_WaitBookTake)
                 SetBookInfo(lblBookInfoTake, "Идёт поиск книги…");
             if (isReturn && _screen == Screen.S5_WaitBookReturn)
                 SetBookInfo(lblBookInfoReturn, "Идёт поиск книги…");
@@ -828,7 +798,7 @@ namespace LibraryTerminal
             if (BYPASS_CARD && _screen == Screen.S4_WaitCardReturn)
                 Switch(Screen.S5_WaitBookReturn, panelScanBookReturn);
 
-            if (_screen == Screen_ScanTake || _screen == Screen.S3_WaitBookTake)
+            if (_screen == Screen.S3_WaitBookTake)
                 StartBookFlowIfFree(epcHex, isReturn: false);
             else if (_screen == Screen.S5_WaitBookReturn)
                 StartBookFlowIfFree(epcHex, isReturn: true);
@@ -837,7 +807,6 @@ namespace LibraryTerminal
         private void OnRruEpcDebug(string epc)
         {
             if (IsDisposed) return;
-            _lastRruEpc = epc;
             var line = "[RRU EPC] " + epc;
             try
             {
@@ -1039,38 +1008,6 @@ namespace LibraryTerminal
             }
         }
 
-        // === АВТО (по статусу) ===
-        private async Task HandleAutoAsync(string rawTag)
-        {
-            try
-            {
-                string tag = ResolveBookKey(rawTag);
-                _lastBookTag = tag;
-
-                await EnsureIrbisConnectedAsync();
-
-                var rec = await OffUi<ManagedClient.IrbisRecord>(delegate { return _svc.FindOneByBookRfid(tag); });
-                if (rec == null) { await HandleReturnAsync(tag); return; }
-
-                Log910Compare(rec, tag);
-                var f910 = rec.Fields
-                    .Where(f => f.Tag == "910")
-                    .FirstOrDefault(f => BookTagMatches910(tag, f.GetFirstSubFieldText('h')));
-
-                if (f910 == null) { await HandleReturnAsync(tag); return; }
-
-                string status = f910.GetFirstSubFieldText('a') ?? string.Empty;
-
-                if (string.IsNullOrEmpty(status) || status == STATUS_IN_STOCK)
-                    await HandleTakeAsync(tag);
-                else
-                    await HandleReturnAsync(tag);
-            } catch (Exception ex)
-            {
-                MessageBox.Show(this, "Авто-обработка книги: " + ex.Message, "Эмуляция книги", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
         // ===== UI =====
         private void SetUiTexts()
         {
@@ -1094,14 +1031,6 @@ namespace LibraryTerminal
             foreach (Control c in Controls) { var p = c as Panel; if (p != null) p.Controls.Add(back); }
         }
 
-        private void btnToMenu_Click(object sender, EventArgs e)
-        { Switch(Screen.S1_Menu, panelMenu); }
-
-        private async void btnCheckBook_Click(object sender, EventArgs e)
-        { await ShowBookInfoAsync(); }
-
-        private async void TestIrbisConnection(object sender, EventArgs e)
-        { await TestIrbisConnectionAsync(); }
 
         // ======= PC/SC: утилиты =======
         private string FindPreferredPiccReaderName()
@@ -1248,80 +1177,12 @@ namespace LibraryTerminal
             } catch { return null; }
         }
 
-        private async Task ShowBookInfoAsync(string bookTag = null)
-        {
-            try
-            {
-                await EnsureIrbisConnectedAsync();
 
-                string tag = bookTag;
-                if (string.IsNullOrWhiteSpace(tag)) tag = _lastBookTag;
-                if (string.IsNullOrWhiteSpace(tag))
-                {
-                    tag = Ask("Проверка книги", "Введите RFID-метку книги (HEX/код):", "");
-                    if (string.IsNullOrWhiteSpace(tag)) return;
-                }
-
-                tag = ResolveBookKey(tag);
-
-                var rec = await OffUi<ManagedClient.IrbisRecord>(delegate { return _svc.FindOneByBookRfid(tag); });
-                if (rec == null)
-                {
-                    MessageBox.Show(this, "Книга не найдена по метке: " + tag, "Проверка книги", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                string brief = await SafeGetBookBriefAsync(rec.Mfn);
-                if (string.IsNullOrWhiteSpace(brief))
-                {
-                    var title = rec.FM("200", 'a') ?? "(без заглавия)";
-                    brief = title;
-                }
-                var minimal = GetTitleAndAuthorOnly(brief);
-                MessageBox.Show(this, $"[MFN {rec.Mfn}] {minimal}", "Книга", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            } catch (Exception ex)
-            {
-                MessageBox.Show(this, "Ошибка проверки книги: " + ex.Message, "Проверка книги", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        // --- маленький InputBox ---
-        private static string Ask(string title, string prompt, string def)
-        {
-            using (var f = new Form())
-            using (var txt = new TextBox())
-            using (var lbl = new Label())
-            using (var ok = new Button())
-            using (var cancel = new Button())
-            {
-                f.Text = title; f.FormBorderStyle = FormBorderStyle.FixedDialog;
-                f.StartPosition = FormStartPosition.CenterParent; f.MinimizeBox = f.MaximizeBox = false;
-                f.ClientSize = new System.Drawing.Size(420, 120);
-
-                lbl.Text = prompt; lbl.SetBounds(12, 12, 396, 20);
-                txt.Text = def; txt.SetBounds(12, 36, 396, 23);
-                ok.Text = "OK"; ok.DialogResult = DialogResult.OK; ok.SetBounds(232, 72, 80, 26);
-                cancel.Text = "Отмена"; cancel.DialogResult = DialogResult.Cancel; cancel.SetBounds(328, 72, 80, 26);
-
-                f.Controls.AddRange(new Control[] { lbl, txt, ok, cancel });
-                f.AcceptButton = ok; f.CancelButton = cancel;
-
-                return f.ShowDialog() == DialogResult.OK ? txt.Text : null;
-            }
-        }
-
-        private static string IrbisServiceManaged_Normalize(string s)
-        {
-            if (string.IsNullOrWhiteSpace(s)) return null;
-            s = s.Trim().Replace(" ", "").Replace("-", "").Replace(":", "");
-            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s.Substring(2);
-            return s.ToUpperInvariant();
-        }
 
         private static bool BookTagMatches910(string scanned, string hFromRecord)
         {
-            var key = IrbisServiceManaged_Normalize(scanned);
-            var nh = IrbisServiceManaged_Normalize(hFromRecord);
+            var key = IrbisServiceManaged.NormalizeId(scanned);
+            var nh = IrbisServiceManaged.NormalizeId(hFromRecord);
             if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(nh)) return false;
             if (nh == key) return true;
             if (key.EndsWith(nh)) return true;
@@ -1333,11 +1194,11 @@ namespace LibraryTerminal
         {
             try
             {
-                var key = IrbisServiceManaged_Normalize(scanned);
+                var key = IrbisServiceManaged.NormalizeId(scanned);
                 var hs = rec.Fields.Where(f => f.Tag == "910")
                     .Select(f => f.GetFirstSubFieldText('h'))
                     .Where(h => !string.IsNullOrWhiteSpace(h))
-                    .Select(IrbisServiceManaged_Normalize)
+                    .Select(IrbisServiceManaged.NormalizeId)
                     .ToArray();
 
                 Logger.Append(
@@ -1414,12 +1275,6 @@ namespace LibraryTerminal
                 var lbl = isReturn ? lblReaderHeaderReturn : lblReaderHeaderTake;
                 if (lbl != null) lbl.Text = text ?? "";
             } catch { }
-        }
-
-        private void ClearReaderHeaders()
-        {
-            try { if (lblReaderHeaderTake != null) lblReaderHeaderTake.Text = ""; } catch { }
-            try { if (lblReaderHeaderReturn != null) lblReaderHeaderReturn.Text = ""; } catch { }
         }
 
         private void SetBookInfo(Label lbl, string text)
@@ -1528,11 +1383,6 @@ namespace LibraryTerminal
             {
                 lblSuccess.Text = $"{action}\r\nMFN книги: {mfn}";
             }
-        }
-
-        private void ShowStatus(string text)
-        {
-            try { this.Text = string.IsNullOrWhiteSpace(text) ? "Терминал библиотеки" : $"Терминал — {text}"; } catch { }
         }
 
         private async Task ProbeIqrfidAsync(string portName, int baud, string nl, int ms = 3000)
