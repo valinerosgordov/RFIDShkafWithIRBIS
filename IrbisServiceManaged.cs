@@ -728,53 +728,69 @@ namespace LibraryTerminal
         }
 
         /// <summary>Выдача: СНАЧАЛА 40 в RDR, потом 910^A=1.</summary>
-        public string IssueByRfid(string bookRfid)
+        public Result<string> IssueByRfid(string bookRfid)
         {
-            bookRfid = NormalizeId(bookRfid);
-            if (LastReaderMfn <= 0) throw new InvalidOperationException("Сначала вызови ValidateCard() для читателя.");
-            if (string.IsNullOrWhiteSpace(bookRfid)) throw new ArgumentNullException(nameof(bookRfid));
+            var normalizedRfid = NormalizeId(bookRfid);
+            if (!normalizedRfid.HasValue) 
+                return Result<string>.Failure("Invalid RFID format");
+            
+            if (LastReaderMfn <= 0) 
+                return Result<string>.Failure("Сначала вызови ValidateCard() для читателя.");
 
-            var book = FindOneByBookRfid(bookRfid);
-            if (book == null) throw new InvalidOperationException("Книга по RFID не найдена.");
+            bookRfid = normalizedRfid.Value;
 
+            var bookOpt = FindOneByBookRfid(bookRfid);
+            if (!bookOpt.HasValue) 
+                return Result<string>.Failure("Книга по RFID не найдена.");
+
+            var book = bookOpt.Value;
             var maskMrg = GetMaskMrg();
             var dbName = book.Database ?? BooksDb;
 
             // 1) запись в RDR (поле 40)
-            if (!AppendRdr40OnIssue(LastReaderMfn, book, bookRfid, maskMrg, CurrentLogin, dbName))
-                throw new InvalidOperationException("Не удалось добавить поле 40 читателю.");
+            var appendResult = AppendRdr40OnIssue(LastReaderMfn, book, bookRfid, maskMrg, CurrentLogin, dbName);
+            if (appendResult.IsFailure)
+                return Result<string>.Failure(appendResult.Error);
 
             // 2) смена статуса книги (910^A=1)
-            if (!UpdateBook910StatusByRfidStrict(book, bookRfid, "1"))
-                throw new InvalidOperationException("Не удалось обновить статус книги (910^A=1).");
+            var updateResult = UpdateBook910StatusByRfidStrict(book, bookRfid, "1");
+            if (updateResult.IsFailure)
+                return Result<string>.Failure(updateResult.Error);
 
             // ★ единое форматирование brief (что ждёт MainForm)
             var brief = FormatBrief(BookBriefFormat, dbName, book.Mfn);
-            return string.IsNullOrWhiteSpace(brief) ? "[без описания]" : brief.Trim();
+            return Result<string>.Success(string.IsNullOrWhiteSpace(brief) ? "[без описания]" : brief.Trim());
         }
 
         /// <summary>Возврат: СНАЧАЛА закрываем 40, потом 910^A=0.</summary>
-        public string ReturnByRfid(string bookRfid)
+        public Result<string> ReturnByRfid(string bookRfid)
         {
-            bookRfid = NormalizeId(bookRfid);
-            if (string.IsNullOrWhiteSpace(bookRfid)) throw new ArgumentNullException(nameof(bookRfid));
+            var normalizedRfid = NormalizeId(bookRfid);
+            if (!normalizedRfid.HasValue) 
+                return Result<string>.Failure("Invalid RFID format");
+
+            bookRfid = normalizedRfid.Value;
 
             // 1) закрываем поле 40 у читателя
-            if (!CompleteRdr40OnReturn(bookRfid, GetMaskMrg(), CurrentLogin))
-                throw new InvalidOperationException("Не удалось обновить поле 40 в записи читателя.");
+            var completeResult = CompleteRdr40OnReturn(bookRfid, GetMaskMrg(), CurrentLogin);
+            if (completeResult.IsFailure)
+                return Result<string>.Failure(completeResult.Error);
 
             // 2) меняем статус в книге
-            var book = FindOneByBookRfid(bookRfid);
-            if (book == null) throw new InvalidOperationException("Книга по RFID не найдена.");
+            var bookOpt = FindOneByBookRfid(bookRfid);
+            if (!bookOpt.HasValue) 
+                return Result<string>.Failure("Книга по RFID не найдена.");
 
-            if (!UpdateBook910StatusByRfidStrict(book, bookRfid, "0"))
-                throw new InvalidOperationException("Не удалось обновить статус книги (910^A=0).");
+            var book = bookOpt.Value;
+            var updateResult = UpdateBook910StatusByRfidStrict(book, bookRfid, "0");
+            if (updateResult.IsFailure)
+                return Result<string>.Failure(updateResult.Error);
 
             var dbName = book.Database ?? BooksDb;
 
             // ★ единое форматирование brief (что ждёт MainForm)
             var brief = FormatBrief(BookBriefFormat, dbName, book.Mfn);
-            return string.IsNullOrWhiteSpace(brief) ? "[без описания]" : brief.Trim();
+            return Result<string>.Success(string.IsNullOrWhiteSpace(brief) ? "[без описания]" : brief.Trim());
         }
 
         public void Dispose()
