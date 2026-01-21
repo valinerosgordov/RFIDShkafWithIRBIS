@@ -199,7 +199,6 @@ namespace LibraryTerminal
         private static Task RunOnBackgroundThreadAsync(Action action) => Task.Run(action);
         private static Task<T> RunOnBackgroundThreadAsync<T>(Func<T> function) => Task.Run(function);
 
-        // ======== ARDUINO: команды (обёртки для обратной совместимости) ========
         private void LogArduino(string message)
         {
             try { Logger.Append("arduino.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}"); } catch { }
@@ -738,7 +737,6 @@ namespace LibraryTerminal
             NavigateToScreen(LibraryTerminal.Screen.MainMenu);
         }
 
-        // ---------- пункты меню ----------
         private void btnTakeBook_Click(object sender, EventArgs e)
         {
             _operationMode = Mode.Take;
@@ -880,7 +878,6 @@ namespace LibraryTerminal
             return hex;
         }
 
-        // ===== КНИЖНЫЕ ПОТОКИ =====
         private void StartBookFlowIfFree(string rawTagOrEpc, bool isReturn)
         {
             var bookKeyOpt = ResolveBookKey(rawTagOrEpc);
@@ -1132,7 +1129,6 @@ namespace LibraryTerminal
             }
         }
 
-        // ===== UI =====
         private void SetUiTexts()
         {
             lblTitleMenu.Text = "Библиотека\nФилиал №1";
@@ -1464,7 +1460,6 @@ namespace LibraryTerminal
             try { if (label != null) label.Text = text ?? ""; } catch { }
         }
 
-        // --------- ВАЖНО: теперь строго «Название / Автор» ---------
         private string GetTitleAndAuthorOnly(string brief)
         {
             try
@@ -1503,7 +1498,6 @@ namespace LibraryTerminal
             }
         }
 
-        // Из brief читателя берём только ФИО (первую «разумную» часть)
         private string ExtractReaderName(string brief)
         {
             if (string.IsNullOrWhiteSpace(brief)) return "Читатель идентифицирован";

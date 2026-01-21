@@ -5,7 +5,6 @@ using System.Configuration;
 
 namespace LibraryTerminal
 {
-    // ===== ЧИТАТЕЛЬСКИЕ КАРТЫ (низкочастотный/PCSC-эмуляция по COM) кря кря кря =====
     internal class CardReaderSerial : SerialWorker, ICardReader
     {
         public event EventHandler<string> CardRead;
@@ -34,10 +33,8 @@ namespace LibraryTerminal
             _debounceMs = debounceMs > 0 ? debounceMs : 250;
         }
 
-        // === Инициализация ридера после открытия порта (по желанию из App.config) ===
         protected override void OnOpened()
         {
-            // отправим иниц. команду, если задана
             var initCmd = System.Configuration.ConfigurationManager.AppSettings["IqrfidInitCmd"];
             int initDelayMs;
             if (!string.IsNullOrWhiteSpace(initCmd))
@@ -46,7 +43,6 @@ namespace LibraryTerminal
                 var afterStr = System.Configuration.ConfigurationManager.AppSettings["IqrfidInitDelayAfterMs"] ?? "100";
                 if (int.TryParse(beforeStr, out initDelayMs) && initDelayMs > 0) Thread.Sleep(initDelayMs);
 
-                // отправляем как строку (уйдёт с NewLine SerialPort'а)
                 try { WriteLineSafe(initCmd); } catch { }
 
                 if (int.TryParse(afterStr, out initDelayMs) && initDelayMs > 0) Thread.Sleep(initDelayMs);
@@ -65,10 +61,7 @@ namespace LibraryTerminal
         {
             if (string.IsNullOrWhiteSpace(line)) return;
 
-            // схлопываем разделители, если ридер присылает "04 A1-B2:C3"
             var collapsed = System.Text.RegularExpressions.Regex.Replace(line, @"[\s:\-]", "");
-
-            // минимальная длина UID из конфига, по умолчанию 6
             int minHexLen = 6;
             int.TryParse(System.Configuration.ConfigurationManager.AppSettings["MinUidHexLen"] ?? "6", out minHexLen);
 
@@ -86,7 +79,6 @@ namespace LibraryTerminal
 
             if (string.IsNullOrEmpty(uid)) return;
 
-            // нормализация под конфиг
             bool strip = "true".Equals(System.Configuration.ConfigurationManager.AppSettings["UidStripDelimiters"] ?? "true",
                                        StringComparison.OrdinalIgnoreCase);
             if (strip) uid = System.Text.RegularExpressions.Regex.Replace(uid, @"[\s:\-]", "");
@@ -97,7 +89,6 @@ namespace LibraryTerminal
                                        StringComparison.OrdinalIgnoreCase);
             if (upper) uid = uid.ToUpperInvariant();
 
-            // антидребезг
             var now = DateTime.UtcNow;
             if (_last == uid && (now - _lastAt).TotalMilliseconds < _debounceMs) return;
             _last = uid; _lastAt = now;
@@ -113,7 +104,6 @@ namespace LibraryTerminal
             }
             SafeLog("UID: " + uid);
 
-            // локальная проверка
             bool IsHex(string s)
             {
                 for (int i = 0; i < s.Length; i++)
@@ -135,7 +125,6 @@ namespace LibraryTerminal
         }
     }
 
-    // ===== КНИЖНЫЕ RFID (через COM) =====
     internal class BookReaderSerial : SerialWorker, IBookReader
     {
         public event EventHandler<string> TagRead;
@@ -242,7 +231,6 @@ namespace LibraryTerminal
             }
         }
 
-        // === Синхронные команды (с ожиданием ответа) ===
         public async Task<bool> HasSpaceAsync()
         {
             return await Task.Run(() => HasSpace());
@@ -311,9 +299,6 @@ namespace LibraryTerminal
 
         public void Beep(int ms = 120) => Send($"BEEP:{ms}");
         public void SendBeep(int milliseconds = 120) => Send($"BEEP:{milliseconds}");
-
-        // === Бинарные команды управления шкафом (формат из control.pb) ===
-        // Пакет: FF, CMD, fromX, fromY, toX, toY, sizeX, sizeY (8 байт)
 
         /// <summary>
         /// Базовый метод отправки бинарного пакета управления шкафом.
@@ -389,7 +374,6 @@ namespace LibraryTerminal
             SendControlPacket(0x05, fromX, fromY, toX, toY, sizeX, sizeY);
         }
 
-        // ---- helpers ----
         private string Request(string cmd, int timeoutMs)
         {
             SafeLog($">> {cmd} (sync)");

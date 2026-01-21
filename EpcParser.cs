@@ -59,21 +59,18 @@ namespace LibraryTerminal
                 return Option<EpcInfo>.None; 
             }
 
-            // 1) Проверяем "шапку"
             for (var i = 0; i < 6; i++)
             {
                 if (bytes[i] != Header[i]) 
                     return Option<EpcInfo>.None;
             }
 
-            // 2) Читаем младшие 48 бит в ulong
             ulong low48 = 0;
             for (var i = 6; i < 12; i++)
             {
                 low48 = (low48 << 8) | bytes[i];
             }
 
-            // 3) Разбираем поля согласно протоколу
             var library = (int)((low48 >> 32) & 0xFFFF);
             var kindNibble = (int)((low48 >> 28) & 0xF);
             var serial = (uint)(low48 & 0x0FFFFFFF);

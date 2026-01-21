@@ -185,7 +185,6 @@ namespace LibraryTerminal
             sp.NewLine = _newline;      // строковый разделитель для WriteLine
             sp.Encoding = Encoding.ASCII;
 
-            // === Настройки из App.config (повторяют демо/устройство) ===
             var parityStr = System.Configuration.ConfigurationManager.AppSettings["IqrfidParity"] ?? "None";
             var stopBitsStr = System.Configuration.ConfigurationManager.AppSettings["IqrfidStopBits"] ?? "One";
             var dataBitsStr = System.Configuration.ConfigurationManager.AppSettings["IqrfidDataBits"] ?? "8";
@@ -201,11 +200,8 @@ namespace LibraryTerminal
             bool dtr; sp.DtrEnable = bool.TryParse(dtrStr, out dtr) ? dtr : true;
             bool rts; sp.RtsEnable = bool.TryParse(rtsStr, out rts) ? rts : true;
 
-            // чтобы событие DataReceived срабатывало на каждом байте
             sp.ReceivedBytesThreshold = 1;
-            // === конец блока настроек ===
 
-            // Позволить наследникам настроить порт перед открытием
             ConfigurePort(sp);
 
             // Открыть и очистить буферы

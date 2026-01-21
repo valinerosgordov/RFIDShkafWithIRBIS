@@ -47,8 +47,6 @@ namespace LibraryTerminal
             return Option<string>.Some(arr[0].Port);
         }
 
-        // --- вспомогательные типы/методы ---
-
         private record AutoParams(string VidPid, int? Index, string NameSub);
 
         private static AutoParams ParseAuto(string s)

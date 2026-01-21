@@ -32,7 +32,6 @@ namespace LibraryTerminal
         private const string DLL = "RRU9816.dll";
         private const string LOG_FILE = "rru_attempts.log";
 
-        // ===== P/Invoke (ровно как в демке) =====
         [DllImport(DLL, CallingConvention = CallingConvention.StdCall, EntryPoint = "OpenComPort")]
         private static extern int OpenComPort(int Port, ref byte ComAddr, byte Baud, ref int PortHandle);
 
@@ -48,8 +47,6 @@ namespace LibraryTerminal
             byte Target, byte InAnt, byte Scantime, byte FastFlag,
             byte[] pEPCList, ref byte Ant, ref int Totallen, ref int CardNum,
             int frmComPortindex);
-
-        // =======================================
 
         public Rru9816Reader()
         { }
@@ -179,10 +176,9 @@ namespace LibraryTerminal
                     }
                     m += epcLenPlus1 + 1; // +1 за байт длины
                 }
-            } catch { /* игнор разовых ошибок парсинга */ }
+            } catch { }
         }
 
-        // ==== utils ====
         private static int ExtractPortNumber(string portName)
         {
             if (string.IsNullOrWhiteSpace(portName)) return 0;

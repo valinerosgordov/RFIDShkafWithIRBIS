@@ -39,7 +39,6 @@ namespace LibraryTerminal
 
                 var book = bookOpt.Value;
 
-                // Проверка статуса книги
                 var statusFieldOpt = GetStatusField(book, bookRfid);
                 if (!statusFieldOpt.HasValue)
                     return OperationResult.Fail("Эта метка не соответствует экземпляру");
@@ -49,7 +48,6 @@ namespace LibraryTerminal
                 if (status != "0")
                     return OperationResult.Fail("Эта книга уже выдана");
 
-                // Выдача книги
                 var issueResult = _irbisService.IssueByRfid(bookRfid);
                 if (issueResult.IsFailure)
                     return OperationResult.Fail(issueResult.Error);
@@ -86,7 +84,6 @@ namespace LibraryTerminal
 
                 var book = bookOpt.Value;
 
-                // Проверка места в шкафу
                 var hasSpace = await _arduinoController.HasSpaceAsync();
                 if (!hasSpace)
                     return OperationResult.Fail("Нет свободного места в шкафу");
@@ -98,7 +95,6 @@ namespace LibraryTerminal
 
                 var brief = returnResult.Value;
 
-                // Открыть шкаф
                 await _arduinoController.OpenBinAsync();
                 _arduinoController.SendOk();
                 _arduinoController.SendBeep(120);

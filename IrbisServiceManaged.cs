@@ -127,8 +127,6 @@ namespace LibraryTerminal
                 yield break;
 
             var baseHex = normalized.Value;
-            
-            // Фильтруем только HEX символы без LINQ
             var hexOnly = new StringBuilder(baseHex.Length);
             foreach (var c in baseHex)
             {
@@ -259,7 +257,6 @@ namespace LibraryTerminal
             finally { _client.Database = saved; }
         }
 
-        // ★ единая обёртка для brief (используется в Issue/Return)
         private string FormatBrief(string fmt, string db, int mfn)
         {
             return WithDatabase(db, () => FormatRecord(fmt, mfn));
@@ -280,8 +277,6 @@ namespace LibraryTerminal
                 return false;
             }
         }
-
-        // === API для UI ===
 
         /// <summary>Проверка карты читателя по UID. True — найден.</summary>
         public bool ValidateCard(string uid)

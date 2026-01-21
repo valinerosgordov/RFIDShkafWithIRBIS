@@ -9,7 +9,6 @@ namespace LibraryTerminal
 {
     public sealed class Acr1281PcscReader : ICardReader, IDisposable
     {
-        // ===== События =====
         public event EventHandler<string> CardRead;
         
         [Obsolete("Use CardRead event instead")]
@@ -26,7 +25,6 @@ namespace LibraryTerminal
         private readonly int _connectRetries;
         private readonly int _busyRetryDelayMs;
 
-        // ===== Служебное =====
         private CancellationTokenSource _cts;
 
         private Task _worker;
@@ -66,7 +64,6 @@ namespace LibraryTerminal
             }
         }
 
-        // ===== Основной цикл =====
         private async Task WorkerAsync(CancellationToken ct)
         {
             IntPtr ctx = IntPtr.Zero;
@@ -75,19 +72,16 @@ namespace LibraryTerminal
             {
                 try
                 {
-                    // 1) Context
                     int rc = SCardEstablishContext(SCARD_SCOPE_USER, IntPtr.Zero, IntPtr.Zero, out ctx);
                     if (rc != SCARD_S_SUCCESS)
                         throw new Exception($"SCardEstablishContext rc=0x{rc:X8}");
 
-                    // 2) Список ридеров
                     var readerOpt = PickPiccReader(ctx);
                     if (!readerOpt.HasValue) continue;
                     var reader = readerOpt.Value;
                     if (string.IsNullOrEmpty(reader))
                         throw new Exception("PC/SC readers not found");
 
-                    // 3) Подключение с ретраями
                     bool connected = false;
                     IntPtr hCard = IntPtr.Zero;
                     int proto = 0;
@@ -123,7 +117,6 @@ namespace LibraryTerminal
 
                     try
                     {
-                        // 4) APDU: FF CA 00 00 00 -> UID
                         var io = (proto == SCARD_PROTOCOL_T0) ? IOREQ_T0 : IOREQ_T1;
                         byte[] send = new byte[] { 0xFF, 0xCA, 0x00, 0x00, 0x00 };
                         byte[] recv = new byte[32];
@@ -214,7 +207,6 @@ namespace LibraryTerminal
             return Option<string>.Some(names[0]);
         }
 
-        // ===== P/Invoke winscard =====
         private const int SCARD_S_SUCCESS = 0x00000000;
 
         private const int SCARD_SCOPE_USER = 0x0000;
