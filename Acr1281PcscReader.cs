@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using LibraryTerminal.Core;
 
 namespace LibraryTerminal
 {
@@ -80,7 +81,9 @@ namespace LibraryTerminal
                         throw new Exception($"SCardEstablishContext rc=0x{rc:X8}");
 
                     // 2) Список ридеров
-                    string reader = PickPiccReader(ctx);
+                    var readerOpt = PickPiccReader(ctx);
+                    if (!readerOpt.HasValue) continue;
+                    var reader = readerOpt.Value;
                     if (string.IsNullOrEmpty(reader))
                         throw new Exception("PC/SC readers not found");
 
@@ -208,7 +211,7 @@ namespace LibraryTerminal
                 if (n.IndexOf("PICC", StringComparison.OrdinalIgnoreCase) >= 0)
                     return n;
 
-            return names[0];
+            return Option<string>.Some(names[0]);
         }
 
         // ===== P/Invoke winscard =====

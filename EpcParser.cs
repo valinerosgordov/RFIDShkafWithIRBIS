@@ -49,7 +49,6 @@ namespace LibraryTerminal
             var bytes = new byte[12];
             try
             {
-                // Преобразуем 24 HEX-символа → 12 байт (без LINQ для производительности)
                 for (var i = 0; i < 12; i++)
                 {
                     bytes[i] = Convert.ToByte(epcHex.Substring(i * 2, 2), 16);

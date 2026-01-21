@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using LibraryTerminal.Core;
 using ManagedClient;
 
 namespace LibraryTerminal
@@ -32,23 +33,28 @@ namespace LibraryTerminal
 
             try
             {
-                var book = _irbisService.FindOneByBookRfid(bookRfid);
-                if (book == null)
+                var bookOpt = _irbisService.FindOneByBookRfid(bookRfid);
+                if (!bookOpt.HasValue)
                     return OperationResult.Fail("Книга не найдена по метке");
 
+                var book = bookOpt.Value;
+
                 // Проверка статуса книги
-                var statusField = GetStatusField(book, bookRfid);
-                if (statusField == null)
+                var statusFieldOpt = GetStatusField(book, bookRfid);
+                if (!statusFieldOpt.HasValue)
                     return OperationResult.Fail("Эта метка не соответствует экземпляру");
 
+                var statusField = statusFieldOpt.Value;
                 var status = statusField.GetFirstSubFieldText('a') ?? string.Empty;
                 if (status != "0")
                     return OperationResult.Fail("Эта книга уже выдана");
 
                 // Выдача книги
-                var brief = _irbisService.IssueByRfid(bookRfid);
-                if (string.IsNullOrWhiteSpace(brief))
-                    return OperationResult.Fail("Не удалось записать выдачу в ИРБИС");
+                var issueResult = _irbisService.IssueByRfid(bookRfid);
+                if (issueResult.IsFailure)
+                    return OperationResult.Fail(issueResult.Error);
+
+                var brief = issueResult.Value;
 
                 // Открыть шкаф
                 await _arduinoController.OpenBinAsync();
@@ -74,9 +80,11 @@ namespace LibraryTerminal
 
             try
             {
-                var book = _irbisService.FindOneByBookRfid(bookRfid);
-                if (book == null)
+                var bookOpt = _irbisService.FindOneByBookRfid(bookRfid);
+                if (!bookOpt.HasValue)
                     return OperationResult.Fail("Книга не найдена по метке");
+
+                var book = bookOpt.Value;
 
                 // Проверка места в шкафу
                 var hasSpace = await _arduinoController.HasSpaceAsync();
@@ -84,9 +92,11 @@ namespace LibraryTerminal
                     return OperationResult.Fail("Нет свободного места в шкафу");
 
                 // Возврат книги
-                var brief = _irbisService.ReturnByRfid(bookRfid);
-                if (string.IsNullOrWhiteSpace(brief))
-                    return OperationResult.Fail("Не удалось записать возврат в ИРБИС");
+                var returnResult = _irbisService.ReturnByRfid(bookRfid);
+                if (returnResult.IsFailure)
+                    return OperationResult.Fail(returnResult.Error);
+
+                var brief = returnResult.Value;
 
                 // Открыть шкаф
                 await _arduinoController.OpenBinAsync();
@@ -102,59 +112,50 @@ namespace LibraryTerminal
             }
         }
 
-        private RecordField GetStatusField(IrbisRecord record, string scannedRfid)
+        private Option<RecordField> GetStatusField(IrbisRecord record, string scannedRfid)
         {
-            var normalizedScanned = IrbisServiceManaged.NormalizeId(scannedRfid);
-            if (string.IsNullOrWhiteSpace(normalizedScanned))
-                return null;
+            var normalizedScannedOpt = IrbisServiceManaged.NormalizeId(scannedRfid);
+            if (!normalizedScannedOpt.HasValue)
+                return Option<RecordField>.None;
+
+            var normalizedScanned = normalizedScannedOpt.Value;
 
             foreach (var field in record.Fields)
             {
                 if (field.Tag != "910")
                     continue;
 
-                var hValue = IrbisServiceManaged.NormalizeId(field.GetFirstSubFieldText('h'));
-                if (string.IsNullOrWhiteSpace(hValue))
+                var hValueOpt = IrbisServiceManaged.NormalizeId(field.GetFirstSubFieldText('h'));
+                if (!hValueOpt.HasValue)
                     continue;
 
+                var hValue = hValueOpt.Value;
                 if (hValue == normalizedScanned || 
                     normalizedScanned.EndsWith(hValue) || 
                     hValue.EndsWith(normalizedScanned))
                 {
-                    return field;
+                    return Option<RecordField>.Some(field);
                 }
             }
 
-            return null;
+            return Option<RecordField>.None;
         }
     }
 
     /// <summary>
     /// Результат операции
     /// </summary>
-    public class OperationResult
+    public record OperationResult(
+        bool Success,
+        string ErrorMessage,
+        string BookBrief,
+        int BookMfn
+    )
     {
-        public bool Success { get; private set; }
-        public string ErrorMessage { get; private set; }
-        public string BookBrief { get; private set; }
-        public int BookMfn { get; private set; }
+        public static OperationResult Success(string brief, int mfn) =>
+            new OperationResult(true, "", brief, mfn);
 
-        private OperationResult(bool success, string message, string brief = "", int mfn = 0)
-        {
-            Success = success;
-            ErrorMessage = message;
-            BookBrief = brief;
-            BookMfn = mfn;
-        }
-
-        public static OperationResult Success(string brief, int mfn)
-        {
-            return new OperationResult(true, "", brief, mfn);
-        }
-
-        public static OperationResult Fail(string errorMessage)
-        {
-            return new OperationResult(false, errorMessage);
-        }
+        public static OperationResult Fail(string errorMessage) =>
+            new OperationResult(false, errorMessage, "", 0);
     }
 }

@@ -2,9 +2,6 @@ using System;
 
 namespace LibraryTerminal.Core
 {
-    /// <summary>
-    /// Railway Oriented Programming result type. Never returns null.
-    /// </summary>
     public readonly struct Result<T>
     {
         private readonly T _value;
@@ -42,9 +39,6 @@ namespace LibraryTerminal.Core
         public static implicit operator Result<T>(T value) => Success(value);
     }
 
-    /// <summary>
-    /// Non-generic Result for operations without return values.
-    /// </summary>
     public readonly struct Result
     {
         private readonly string _error;
@@ -74,9 +68,6 @@ namespace LibraryTerminal.Core
         }
     }
 
-    /// <summary>
-    /// Option type for nullable-like semantics without null.
-    /// </summary>
     public readonly struct Option<T>
     {
         private readonly T _value;

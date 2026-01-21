@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using LibraryTerminal.Core;
 using ManagedClient;
 
 namespace LibraryTerminal
@@ -32,18 +33,18 @@ namespace LibraryTerminal
         /// <summary>
         /// Найти книгу по RFID-метке
         /// </summary>
-        IrbisRecord FindOneByBookRfid(string rfid);
+        Option<IrbisRecord> FindOneByBookRfid(string rfid);
 
         /// <summary>
         /// Выдать книгу по RFID
         /// </summary>
         /// <returns>Краткое описание книги</returns>
-        string IssueByRfid(string bookRfid);
+        Result<string> IssueByRfid(string bookRfid);
 
         /// <summary>
         /// Вернуть книгу по RFID
         /// </summary>
         /// <returns>Краткое описание книги</returns>
-        string ReturnByRfid(string bookRfid);
+        Result<string> ReturnByRfid(string bookRfid);
     }
 }

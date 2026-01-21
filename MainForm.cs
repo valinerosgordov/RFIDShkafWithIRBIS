@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO.Ports;
+using LibraryTerminal.Core;
 
 // ИРБИС клиент для форматирования brief
 using ManagedClient;
@@ -25,11 +26,8 @@ using ReaderB;
 
 namespace LibraryTerminal
 {
-    // ======== ВСТРОЕННЫЙ АДАПТЕР ДЛЯ UHFReader09 (IQRFID-5102 / Chafон) ========
     /// <summary>
-    /// Опрос ридера по SDK (Inventory_G2) и событие EPC как HEX без разделителей.
-    /// Работает и с IQRFID-5102, и с Chafon, т.к. обе говорят через UHFReader09CSharp.dll.
-    /// Сигнатура под «старую» DLL (короткая Inventory_G2).
+    /// Адаптер для UHFReader09.
     /// </summary>
     public sealed class UhfReader09Reader : ICardReader, IDisposable
     {
@@ -120,7 +118,6 @@ namespace LibraryTerminal
         public void Dispose() => Stop();
     }
 
-    // ===== Глобальный логгер =====
     internal static class Logger
     {
         private static readonly string _dir = InitDir();
@@ -151,7 +148,6 @@ namespace LibraryTerminal
 
     public partial class MainForm : Form
     {
-        // Используем новый enum из ScreenManager
         private LibraryTerminal.Screen _currentScreenType;
         private Mode _operationMode = Mode.None;
 
@@ -257,9 +253,6 @@ namespace LibraryTerminal
             btnReturnBook.Location = new Point(leftPosition, btnTakeBook.Bottom + SPACING);
         }
 
-        // BYPASS_CARD удалён - теперь используется локально в OnRruEpcInternal
-
-        // Удалены методы GetConnString и GetBooksDb - теперь используется AppConfiguration
 
         protected override void OnShown(EventArgs e)
         {
@@ -283,7 +276,6 @@ namespace LibraryTerminal
             }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
-        // ===== IQRFID автодетект (если нужен) =====
         private async Task<(string port, int baud, string nl)> AutoDetectIqrfidAsync(int readTo, int writeTo, int reconnMs, int debounce)
         {
             var ports = SerialPort.GetPortNames().OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -349,9 +341,10 @@ namespace LibraryTerminal
 
         private async Task InitIqrfidAutoOrFixedAsync(int readTo, int writeTo, int reconnMs, int debounce)
         {
-            string iqPort = PortResolver.Resolve(ConfigurationManager.AppSettings["IqrfidPort"]);
-            int iqBaud = int.Parse(ConfigurationManager.AppSettings["BaudIqrfid"] ?? "57600");
-            string iqNL = ConfigurationManager.AppSettings["NewLineIqrfid"] ?? "\r\n";
+            var iqPortOpt = PortResolver.Resolve(ConfigurationManager.AppSettings["IqrfidPort"]);
+            var iqPort = iqPortOpt.HasValue ? iqPortOpt.Value : null;
+            var iqBaud = int.Parse(ConfigurationManager.AppSettings["BaudIqrfid"] ?? "57600");
+            var iqNL = ConfigurationManager.AppSettings["NewLineIqrfid"] ?? "\r\n";
 
             if (string.IsNullOrWhiteSpace(iqPort))
             {
@@ -503,8 +496,10 @@ namespace LibraryTerminal
             try
             {
                 var config = _configuration.BookReader;
-                string takePort = PortResolver.Resolve(config.TakePort);
-                string returnPort = PortResolver.Resolve(config.ReturnPort);
+                var takePortOpt = PortResolver.Resolve(config.TakePort);
+                var takePort = takePortOpt.HasValue ? takePortOpt.Value : null;
+                var returnPortOpt = PortResolver.Resolve(config.ReturnPort);
+                var returnPort = returnPortOpt.HasValue ? returnPortOpt.Value : null;
 
                 if (!string.IsNullOrWhiteSpace(takePort))
                 {
@@ -548,7 +543,8 @@ namespace LibraryTerminal
             try
             {
                 var config = _configuration.Arduino;
-                string port = PortResolver.Resolve(config.Port);
+                var portOpt = PortResolver.Resolve(config.Port);
+                var port = portOpt.HasValue ? portOpt.Value : null;
 
                 if (!string.IsNullOrWhiteSpace(port))
                 {
@@ -679,9 +675,10 @@ namespace LibraryTerminal
             try
             {
                 var config = _configuration.Acr1281;
-                string preferred = config.PreferredReaderName;
-                if (string.IsNullOrWhiteSpace(preferred))
-                    preferred = FindPreferredPiccReaderName() ?? "";
+                var preferredOpt = !string.IsNullOrWhiteSpace(config.PreferredReaderName)
+                    ? Option<string>.Some(config.PreferredReaderName)
+                    : FindPreferredPiccReaderName();
+                var preferred = preferredOpt.HasValue ? preferredOpt.Value : "";
 
                 if (string.IsNullOrWhiteSpace(preferred))
                     _acr1281CardReader = new Acr1281PcscReader();
@@ -772,7 +769,6 @@ namespace LibraryTerminal
             return uid;
         }
 
-        // ---------- обработка UID ----------
         private void OnAnyCardUid(string rawUid, string source)
         {
             InvokeIfRequired(() => OnAnyCardUidInternal(rawUid, source));
@@ -797,7 +793,6 @@ namespace LibraryTerminal
                 return;
             }
 
-            // Короткий вывод: [MFN читателя] ФИО (без UID и без префиксов)
             int readerMfn = _irbisService.LastReaderMfn;
             if (readerMfn <= 0)
             {
@@ -807,9 +802,10 @@ namespace LibraryTerminal
                 return;
             }
 
-            string readerBrief = await SafeGetReaderBriefAsync(readerMfn);
-            string readerNameOnly = ExtractReaderName(readerBrief);
-            string readerLine = $"[MFN {readerMfn}] {readerNameOnly}";
+            var readerBriefOpt = await SafeGetReaderBriefAsync(readerMfn);
+            var readerBrief = readerBriefOpt.HasValue ? readerBriefOpt.Value : "";
+            var readerNameOnly = ExtractReaderName(readerBrief);
+            var readerLine = $"[MFN {readerMfn}] {readerNameOnly}";
 
             lblReaderInfoTake.Text = readerLine;
             lblReaderInfoReturn.Text = readerLine;
@@ -863,24 +859,35 @@ namespace LibraryTerminal
                 _currentScreenType == LibraryTerminal.Screen.WaitingCardForReturn)
                 OnAnyCardUid(uid, "UHF09");
 
-            // НИЧЕГО не рисуем в lblReaderInfo* — по требованию «убрать UID»
         }
 
-        // EPC → UID (обрезка по длине из App.config: UhfCardUidLength)
         private static string EpcToCardUid(string epc)
         {
-            if (string.IsNullOrWhiteSpace(epc)) return "";
-            var hex = new string(epc.Where(Uri.IsHexDigit).Select(char.ToUpperInvariant).ToArray());
-            int want = int.TryParse(ConfigurationManager.AppSettings["UhfCardUidLength"], out var w) ? w : 24;
-            if (want > 0 && hex.Length >= want) return hex.Substring(0, want);
+            if (string.IsNullOrWhiteSpace(epc)) 
+                return "";
+
+            var sb = new StringBuilder(epc.Length);
+            foreach (var c in epc)
+            {
+                if (Uri.IsHexDigit(c))
+                    sb.Append(char.ToUpperInvariant(c));
+            }
+            
+            var hex = sb.ToString();
+            var want = int.TryParse(ConfigurationManager.AppSettings["UhfCardUidLength"], out var w) ? w : 24;
+            if (want > 0 && hex.Length >= want) 
+                return hex.Substring(0, want);
             return hex;
         }
 
         // ===== КНИЖНЫЕ ПОТОКИ =====
         private void StartBookFlowIfFree(string rawTagOrEpc, bool isReturn)
         {
-            var bookKey = ResolveBookKey(rawTagOrEpc);
-            if (string.IsNullOrWhiteSpace(bookKey)) return;
+            var bookKeyOpt = ResolveBookKey(rawTagOrEpc);
+            if (!bookKeyOpt.HasValue) 
+                return;
+            
+            var bookKey = bookKeyOpt.Value;
 
             if (!isReturn && _currentScreenType == LibraryTerminal.Screen.WaitingBookForTake)
                 SetBookInfo(_bookInfoTakeLabel, "Идёт поиск книги…");
@@ -974,11 +981,22 @@ namespace LibraryTerminal
             } catch { }
         }
 
-        private static string NormalizeHex24(string s)
+        private static Option<string> NormalizeHex24(string s)
         {
-            if (string.IsNullOrWhiteSpace(s)) return null;
-            var hex = new string(s.Where(Uri.IsHexDigit).Select(char.ToUpperInvariant).ToArray());
-            return (hex.Length >= 24) ? hex.Substring(0, 24) : null;
+            if (string.IsNullOrWhiteSpace(s)) 
+                return Option<string>.None;
+
+            var sb = new StringBuilder(s.Length);
+            foreach (var c in s)
+            {
+                if (Uri.IsHexDigit(c))
+                    sb.Append(char.ToUpperInvariant(c));
+            }
+            
+            var hex = sb.ToString();
+            return hex.Length >= 24 
+                ? Option<string>.Some(hex.Substring(0, 24)) 
+                : Option<string>.None;
         }
 
         private static bool UseEpcBookKey()
@@ -987,27 +1005,32 @@ namespace LibraryTerminal
             return !string.IsNullOrEmpty(v) && v.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
 
-        private string ResolveBookKey(string tagOrEpc)
+        private Option<string> ResolveBookKey(string tagOrEpc)
         {
-            var hex24 = NormalizeHex24(tagOrEpc);
-            if (hex24 != null)
+            var hex24Opt = NormalizeHex24(tagOrEpc);
+            if (hex24Opt.HasValue)
             {
+                var hex24 = hex24Opt.Value;
                 if (UseEpcBookKey())
                 {
-                    var epc = EpcParser.Parse(hex24);
-                    if (epc != null && epc.Kind == TagKind.Book)
-                        return string.Format("{0:D2}-{1}", epc.LibraryCode, epc.Serial);
+                    var epcOpt = EpcParser.Parse(hex24);
+                    if (epcOpt.HasValue && epcOpt.Value.Kind == TagKind.Book)
+                    {
+                        var epc = epcOpt.Value;
+                        return Option<string>.Some(string.Format("{0:D2}-{1}", epc.LibraryCode, epc.Serial));
+                    }
                 }
-                return hex24; // как хранится в 910^h
+                return Option<string>.Some(hex24); // как хранится в 910^h
             }
-            return tagOrEpc != null ? tagOrEpc.Trim() : null;
+            return !string.IsNullOrWhiteSpace(tagOrEpc) 
+                ? Option<string>.Some(tagOrEpc.Trim()) 
+                : Option<string>.None;
         }
 
         // Методы OpenBinAsync и HasSpaceAsync теперь используют _arduinoController через BookOperationService
 
         private static string EscapeNL(string s) => s?.Replace("\r", "\\r").Replace("\n", "\\n");
 
-        // ====== ВЫДАЧА ======
         private async Task HandleTakeAsync(string bookTag)
         {
             try
@@ -1023,15 +1046,14 @@ namespace LibraryTerminal
                     return;
                 }
 
-                // Показываем информацию о книге
-                var rec = await RunOnBackgroundThreadAsync(() => _irbisService.FindOneByBookRfid(bookTag));
-                if (rec != null)
+                var recOpt = await RunOnBackgroundThreadAsync(() => _irbisService.FindOneByBookRfid(bookTag));
+                if (recOpt.HasValue)
                 {
+                    var rec = recOpt.Value;
                     await ShowBookInfoOnLabel(rec, takeMode: true);
                     _lastBookMfn = rec.Mfn;
                 }
 
-                // Используем BookOperationService для выдачи
                 if (_bookOperationService == null)
                 {
                     throw new InvalidOperationException("BookOperationService не инициализирован");
@@ -1061,22 +1083,20 @@ namespace LibraryTerminal
             }
         }
 
-        // ====== ВОЗВРАТ ======
         private async Task HandleReturnAsync(string bookTag)
         {
             try
             {
                 await EnsureIrbisConnectedAsync();
 
-                // Показываем информацию о книге
-                var rec = await RunOnBackgroundThreadAsync(() => _irbisService.FindOneByBookRfid(bookTag));
-                if (rec != null)
+                var recOpt = await RunOnBackgroundThreadAsync(() => _irbisService.FindOneByBookRfid(bookTag));
+                if (recOpt.HasValue)
                 {
+                    var rec = recOpt.Value;
                     await ShowBookInfoOnLabel(rec, takeMode: false);
                     _lastBookMfn = rec.Mfn;
                 }
 
-                // Используем BookOperationService для возврата
                 if (_bookOperationService == null)
                 {
                     throw new InvalidOperationException("BookOperationService не инициализирован");
@@ -1136,24 +1156,47 @@ namespace LibraryTerminal
         }
 
 
-        // ======= PC/SC: утилиты =======
-        private string FindPreferredPiccReaderName()
+        private Option<string> FindPreferredPiccReaderName()
         {
             try
             {
                 using (var ctx = ContextFactory.Instance.Establish(SCardScope.System))
                 {
                     var readers = ctx.GetReaders();
-                    if (readers == null || readers.Length == 0) return null;
+                    if (readers == null || readers.Length == 0) 
+                        return Option<string>.None;
 
-                    var picc = readers.FirstOrDefault(r => r.IndexOf("PICC", StringComparison.OrdinalIgnoreCase) >= 0
-                                                        || r.IndexOf("Contactless", StringComparison.OrdinalIgnoreCase) >= 0);
-                    if (!string.IsNullOrWhiteSpace(picc)) return picc;
+                    string picc = null;
+                    foreach (var r in readers)
+                    {
+                        if (r.IndexOf("PICC", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            r.IndexOf("Contactless", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            picc = r;
+                            break;
+                        }
+                    }
+                    if (!string.IsNullOrWhiteSpace(picc)) 
+                        return Option<string>.Some(picc);
 
-                    var anyAcr = readers.FirstOrDefault(r => r.IndexOf("ACR1281", StringComparison.OrdinalIgnoreCase) >= 0);
-                    return anyAcr ?? readers.First();
+                    string anyAcr = null;
+                    foreach (var r in readers)
+                    {
+                        if (r.IndexOf("ACR1281", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            anyAcr = r;
+                            break;
+                        }
+                    }
+                    return !string.IsNullOrWhiteSpace(anyAcr) 
+                        ? Option<string>.Some(anyAcr) 
+                        : Option<string>.Some(readers[0]);
                 }
-            } catch { return null; }
+            } 
+            catch 
+            { 
+                return Option<string>.None; 
+            }
         }
 
         private static void DiagLog(string msg)
@@ -1235,62 +1278,87 @@ namespace LibraryTerminal
             MessageBox.Show(sb.ToString(), "Диагностика PC/SC", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private async Task<string> SafeGetReaderBriefAsync(int mfn)
+        private async Task<Option<string>> SafeGetReaderBriefAsync(int mfn)
         {
             try
             {
-                if (mfn <= 0) return null;
+                if (mfn <= 0) 
+                    return Option<string>.None;
 
                 var rdrDb = ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
                 var briefFmt = ConfigurationManager.AppSettings["BriefFormat"] ?? "@brief";
 
-                return await OffUi<string>(delegate {
+                var brief = await OffUi<string>(delegate {
                     using (var client = new ManagedClient64())
                     {
                         client.ParseConnectionString(GetConnString());
                         client.Connect();
                         client.PushDatabase(rdrDb);
-                        var brief = client.FormatRecord(briefFmt, mfn);
+                        var result = client.FormatRecord(briefFmt, mfn);
                         client.PopDatabase();
-                        return string.IsNullOrWhiteSpace(brief) ? null : brief.Trim();
+                        return string.IsNullOrWhiteSpace(result) ? null : result.Trim();
                     }
                 });
-            } catch { return null; }
+                
+                return !string.IsNullOrWhiteSpace(brief) 
+                    ? Option<string>.Some(brief) 
+                    : Option<string>.None;
+            } 
+            catch 
+            { 
+                return Option<string>.None; 
+            }
         }
 
-        private async Task<string> SafeGetBookBriefAsync(int mfn)
+        private async Task<Option<string>> SafeGetBookBriefAsync(int mfn)
         {
             try
             {
-                if (mfn <= 0) return null;
+                if (mfn <= 0) 
+                    return Option<string>.None;
 
                 var booksDb = ConfigurationManager.AppSettings["BooksDb"] ?? "KAT%SERV09%";
                 var briefFmt = ConfigurationManager.AppSettings["BookBriefFormat"] ?? "@brief";
 
-                return await OffUi<string>(() => {
+                var brief = await OffUi<string>(() => {
                     using (var client = new ManagedClient64())
                     {
                         client.ParseConnectionString(GetConnString());
                         client.Connect();
                         client.PushDatabase(booksDb);
-                        var brief = client.FormatRecord(briefFmt, mfn);
+                        var result = client.FormatRecord(briefFmt, mfn);
                         client.PopDatabase();
-                        return string.IsNullOrWhiteSpace(brief) ? null : brief.Trim();
+                        return string.IsNullOrWhiteSpace(result) ? null : result.Trim();
                     }
                 });
-            } catch { return null; }
+                
+                return !string.IsNullOrWhiteSpace(brief) 
+                    ? Option<string>.Some(brief) 
+                    : Option<string>.None;
+            } 
+            catch 
+            { 
+                return Option<string>.None; 
+            }
         }
 
 
 
         private static bool BookTagMatches910(string scanned, string hFromRecord)
         {
-            var key = IrbisServiceManaged.NormalizeId(scanned);
-            var nh = IrbisServiceManaged.NormalizeId(hFromRecord);
-            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(nh)) return false;
-            if (nh == key) return true;
-            if (key.EndsWith(nh)) return true;
-            if (nh.EndsWith(key)) return true;
+            var keyOpt = IrbisServiceManaged.NormalizeId(scanned);
+            var nhOpt = IrbisServiceManaged.NormalizeId(hFromRecord);
+            if (!keyOpt.HasValue || !nhOpt.HasValue) 
+                return false;
+            
+            var key = keyOpt.Value;
+            var nh = nhOpt.Value;
+            if (nh == key) 
+                return true;
+            if (key.EndsWith(nh)) 
+                return true;
+            if (nh.EndsWith(key)) 
+                return true;
             return false;
         }
 
@@ -1298,12 +1366,23 @@ namespace LibraryTerminal
         {
             try
             {
-                var key = IrbisServiceManaged.NormalizeId(scanned);
-                var hs = rec.Fields.Where(f => f.Tag == "910")
-                    .Select(f => f.GetFirstSubFieldText('h'))
-                    .Where(h => !string.IsNullOrWhiteSpace(h))
-                    .Select(IrbisServiceManaged.NormalizeId)
-                    .ToArray();
+                var keyOpt = IrbisServiceManaged.NormalizeId(scanned);
+                var key = keyOpt.HasValue ? keyOpt.Value : scanned;
+                
+                var hs = new List<string>();
+                foreach (var f in rec.Fields)
+                {
+                    if (f.Tag != "910")
+                        continue;
+                    
+                    var h = f.GetFirstSubFieldText('h');
+                    if (string.IsNullOrWhiteSpace(h))
+                        continue;
+                    
+                    var normalizedOpt = IrbisServiceManaged.NormalizeId(h);
+                    if (normalizedOpt.HasValue)
+                        hs.Add(normalizedOpt.Value);
+                }
 
                 Logger.Append(
                     "irbis.log",
@@ -1344,7 +1423,6 @@ namespace LibraryTerminal
             SetBookInfo(_bookInfoReturnLabel, "");
         }
 
-        // ====== Шапка с ФИО ======
         private void InitReaderHeaderLabels()
         {
             _readerHeaderTakeLabel = new Label
@@ -1394,7 +1472,6 @@ namespace LibraryTerminal
                 if (string.IsNullOrWhiteSpace(brief)) return "";
                 var s = brief.Replace("\r", " ").Replace("\n", " ").Trim();
 
-                // Ищем разделитель авторов " / "
                 int slash = s.IndexOf(" / ");
                 string titlePart = s;
                 string authors = "";
@@ -1410,7 +1487,6 @@ namespace LibraryTerminal
                     authors = (end >= 0 ? rest.Substring(0, end) : rest).Trim();
                 }
 
-                // Убираем ведущего автора из начала (шаблон "Автор. Название")
                 int dot = titlePart.IndexOf(". ");
                 if (dot >= 0 && dot + 2 < titlePart.Length)
                     titlePart = titlePart.Substring(dot + 2).Trim();
@@ -1433,12 +1509,10 @@ namespace LibraryTerminal
             if (string.IsNullOrWhiteSpace(brief)) return "Читатель идентифицирован";
             var s = brief.Replace("\r", " ").Replace("\n", " ").Trim();
 
-            // Часто ФИО до первой «,» или «;»
             int cut = s.IndexOf(',');
             if (cut < 0) cut = s.IndexOf(';');
             if (cut > 0) s = s.Substring(0, cut);
 
-            // защита от очень длинных строк
             if (s.Length > 80) s = s.Substring(0, 80);
             return s.Trim();
         }
@@ -1447,7 +1521,8 @@ namespace LibraryTerminal
         {
             try
             {
-                string brief = await SafeGetBookBriefAsync(rec.Mfn);
+                var briefOpt = await SafeGetBookBriefAsync(rec.Mfn);
+                var brief = briefOpt.HasValue ? briefOpt.Value : "";
                 if (string.IsNullOrWhiteSpace(brief))
                 {
                     var title = rec.FM("200", 'a') ?? "(без заглавия)";

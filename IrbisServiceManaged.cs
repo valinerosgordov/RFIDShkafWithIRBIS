@@ -22,14 +22,12 @@ namespace LibraryTerminal
         public string CurrentLogin { get; private set; }
         public int LastReaderMfn { get; private set; }
 
-        // ★ Удобные свойства конфигурации
         private string BooksDb => ConfigurationManager.AppSettings["BooksDb"] ?? "IBIS";
 
         private string ReadersDb => ConfigurationManager.AppSettings["ReadersDb"] ?? "RDR";
         private string BookBriefFormat => ConfigurationManager.AppSettings["BookBriefFormat"] ?? "@brief";
         public string ConnectionString => _lastConnectionString;
 
-        // === Подключение ===
         public void Connect()
         {
             var cs = ConfigurationManager.AppSettings["connection-string"]
@@ -107,7 +105,6 @@ namespace LibraryTerminal
             _currentDb = dbName;
         }
 
-        // === Нормализация идентификаторов (RFID/UID/EPC/инв.) ===
         internal static Option<string> NormalizeId(string s)
         {
             if (string.IsNullOrWhiteSpace(s)) 
@@ -123,8 +120,6 @@ namespace LibraryTerminal
             return Option<string>.Some(result.ToUpperInvariant());
         }
 
-        // --- генератор вариантов UID (HEX, разделители, реверс, DEC и DEC с нулями)
-        // Оптимизировано: без LINQ для производительности
         private static IEnumerable<string> MakeUidVariants(string uid)
         {
             var normalized = NormalizeId(uid);
@@ -149,12 +144,9 @@ namespace LibraryTerminal
                 yield break;
             }
 
-            // базовые HEX-варианты
-            yield return hexStr;                        // ABCDEF12
-            yield return InsertEvery2(hexStr, ":");     // AB:CD:EF:12
-            yield return InsertEvery2(hexStr, "-");     // AB-CD-EF-12
-
-            // реверс по байтам
+            yield return hexStr;
+            yield return InsertEvery2(hexStr, ":");
+            yield return InsertEvery2(hexStr, "-");
             var revHex = ReverseByByte(hexStr);
             if (!string.Equals(revHex, hexStr, StringComparison.Ordinal))
             {
@@ -163,7 +155,6 @@ namespace LibraryTerminal
                 yield return InsertEvery2(revHex, "-");
             }
 
-            // десятичные представления
             if (ulong.TryParse(hexStr, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var valHex))
             {
                 var dec = valHex.ToString(CultureInfo.InvariantCulture);
@@ -205,7 +196,6 @@ namespace LibraryTerminal
             return sb.ToString();
         }
 
-        // === Вспомогательные ===
         private string GetMaskMrg()
         {
             try
@@ -241,7 +231,6 @@ namespace LibraryTerminal
             return _client.ReadRecord(mfn);
         }
 
-        // ★ безопасная запись с логом ошибки
         private bool WriteRecordSafe(MarcRecord record)
         {
             try
@@ -276,7 +265,6 @@ namespace LibraryTerminal
             return WithDatabase(db, () => FormatRecord(fmt, mfn));
         }
 
-        // Быстрая проверка коннекта
         public bool TestConnection(out string error)
         {
             try
@@ -353,7 +341,6 @@ namespace LibraryTerminal
             if (!normalized.HasValue) 
                 return Option<MarcRecord>.None;
 
-            // Фильтруем только HEX символы без LINQ
             var sb = new StringBuilder(normalized.Value.Length);
             foreach (var c in normalized.Value)
             {
@@ -426,7 +413,6 @@ namespace LibraryTerminal
 
             var key = normalizedKey.Value;
 
-            // 1) Находим нужный повтор 910 по ^h (допускаем «хвостовое» совпадение)
             RecordField f910 = null;
             foreach (var f in rec.Fields)
             {
@@ -448,7 +434,6 @@ namespace LibraryTerminal
             if (f910 == null) 
                 return Result<bool>.Failure("Field 910 not found for tag");
 
-            // 2) Гарантируем наличие ^h
             RecordField.SubField hSf = null;
             foreach (var sf in f910.SubFields)
             {
@@ -464,7 +449,6 @@ namespace LibraryTerminal
             else if (string.IsNullOrWhiteSpace(hSf.Text)) 
                 hSf.Text = key;
 
-            // 3) Upsert статуса ^a (0/1)
             RecordField.SubField aSf = null;
             foreach (var sf in f910.SubFields)
             {
@@ -480,15 +464,12 @@ namespace LibraryTerminal
             else 
                 aSf.Text = newStatus;
 
-            // 4) Сохраняем запись в IBIS
             var booksDb = rec.Database ?? BooksDb;
             var success = WithDatabase(booksDb, () => WriteRecordSafe(rec));
             return success 
                 ? Result<bool>.Success(true) 
                 : Result<bool>.Failure("Failed to write record");
         }
-
-        // ===== ХЕЛПЕРЫ =====
 
         private static Option<string> NormalizeTag(string s)
         {
@@ -671,8 +652,6 @@ namespace LibraryTerminal
             }
 
             var now = DateTime.Now;
-
-            // ^2 — время возврата
             var nowTime = now.ToString("HHmmss");
             RecordField.SubField sf2 = null;
             foreach (var sf in f40.SubFields)
@@ -704,7 +683,6 @@ namespace LibraryTerminal
             else 
                 sff.Text = nowDate;
 
-            // ^I — ответственное лицо (оператор)
             var iVal = string.IsNullOrWhiteSpace(login) ? (CurrentLogin ?? "") : login;
             RecordField.SubField sfi = null;
             foreach (var sf in f40.SubFields)
@@ -747,17 +725,14 @@ namespace LibraryTerminal
             var maskMrg = GetMaskMrg();
             var dbName = book.Database ?? BooksDb;
 
-            // 1) запись в RDR (поле 40)
             var appendResult = AppendRdr40OnIssue(LastReaderMfn, book, bookRfid, maskMrg, CurrentLogin, dbName);
             if (appendResult.IsFailure)
                 return Result<string>.Failure(appendResult.Error);
 
-            // 2) смена статуса книги (910^A=1)
             var updateResult = UpdateBook910StatusByRfidStrict(book, bookRfid, "1");
             if (updateResult.IsFailure)
                 return Result<string>.Failure(updateResult.Error);
 
-            // ★ единое форматирование brief (что ждёт MainForm)
             var brief = FormatBrief(BookBriefFormat, dbName, book.Mfn);
             return Result<string>.Success(string.IsNullOrWhiteSpace(brief) ? "[без описания]" : brief.Trim());
         }
@@ -771,12 +746,10 @@ namespace LibraryTerminal
 
             bookRfid = normalizedRfid.Value;
 
-            // 1) закрываем поле 40 у читателя
             var completeResult = CompleteRdr40OnReturn(bookRfid, GetMaskMrg(), CurrentLogin);
             if (completeResult.IsFailure)
                 return Result<string>.Failure(completeResult.Error);
 
-            // 2) меняем статус в книге
             var bookOpt = FindOneByBookRfid(bookRfid);
             if (!bookOpt.HasValue) 
                 return Result<string>.Failure("Книга по RFID не найдена.");
@@ -787,8 +760,6 @@ namespace LibraryTerminal
                 return Result<string>.Failure(updateResult.Error);
 
             var dbName = book.Database ?? BooksDb;
-
-            // ★ единое форматирование brief (что ждёт MainForm)
             var brief = FormatBrief(BookBriefFormat, dbName, book.Mfn);
             return Result<string>.Success(string.IsNullOrWhiteSpace(brief) ? "[без описания]" : brief.Trim());
         }
