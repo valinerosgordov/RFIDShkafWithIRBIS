@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Text.RegularExpressions;
+using LibraryTerminal.Core;
 
 namespace LibraryTerminal
 {
@@ -10,73 +11,71 @@ namespace LibraryTerminal
     {
         // "COM5" -> "COM5"
         // "auto:VID_1A86&PID_7523,index=1,name=Card" -> ищем по VID/PID/имени
-        public static string Resolve(string setting)
+        public static Option<string> Resolve(string setting)
         {
-            if (string.IsNullOrWhiteSpace(setting)) return null;
+            if (string.IsNullOrWhiteSpace(setting)) 
+                return Option<string>.None;
 
             if (!setting.StartsWith("auto:", StringComparison.OrdinalIgnoreCase))
-                return setting.Trim(); // явный COMx
+                return Option<string>.Some(setting.Trim()); // явный COMx
 
-            AutoParams pars = ParseAuto(setting.Substring(5));
-            List<SerialPnP> list = QueryPnPSerials();
+            var pars = ParseAuto(setting.Substring(5));
+            var list = QueryPnPSerials();
 
-            IEnumerable<SerialPnP> q = list;
+            var q = list.AsEnumerable();
 
             if (!string.IsNullOrEmpty(pars.VidPid))
+            {
                 q = q.Where(x => x.HardwareIds.Any(h =>
-                        h.IndexOf(pars.VidPid, StringComparison.OrdinalIgnoreCase) >= 0));
+                    h.IndexOf(pars.VidPid, StringComparison.OrdinalIgnoreCase) >= 0));
+            }
 
             if (!string.IsNullOrEmpty(pars.NameSub))
+            {
                 q = q.Where(x =>
-                        ((x.Caption ?? "").IndexOf(pars.NameSub, StringComparison.OrdinalIgnoreCase) >= 0) ||
-                        ((x.Description ?? "").IndexOf(pars.NameSub, StringComparison.OrdinalIgnoreCase) >= 0));
+                    ((x.Caption ?? "").IndexOf(pars.NameSub, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    ((x.Description ?? "").IndexOf(pars.NameSub, StringComparison.OrdinalIgnoreCase) >= 0));
+            }
 
-            SerialPnP[] arr = q.OrderBy(x => x.Port).ToArray();
-            if (arr.Length == 0) return null;
+            var arr = q.OrderBy(x => x.Port).ToArray();
+            if (arr.Length == 0) 
+                return Option<string>.None;
 
             if (pars.Index.HasValue && pars.Index.Value >= 0 && pars.Index.Value < arr.Length)
-                return arr[pars.Index.Value].Port;
+                return Option<string>.Some(arr[pars.Index.Value].Port);
 
-            return arr[0].Port;
+            return Option<string>.Some(arr[0].Port);
         }
 
         // --- вспомогательные типы/методы ---
 
-        private class AutoParams
-        {
-            public string VidPid;
-            public int? Index;
-            public string NameSub;
-        }
+        private record AutoParams(string VidPid, int? Index, string NameSub);
 
         private static AutoParams ParseAuto(string s)
         {
             // пример строки: "VID_1A86&PID_7523,index=1,name=Card"
-            AutoParams p = new AutoParams();
-            string[] parts = s.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 0; i < parts.Length; i++)
+            string vidPid = null;
+            int? index = null;
+            string nameSub = null;
+            
+            var parts = s.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
             {
-                string t = parts[i].Trim();
+                var t = part.Trim();
                 if (t.StartsWith("VID_", StringComparison.OrdinalIgnoreCase))
-                    p.VidPid = t;
+                    vidPid = t;
                 else if (t.StartsWith("index=", StringComparison.OrdinalIgnoreCase))
                 {
-                    int tmp;
-                    if (int.TryParse(t.Substring(6), out tmp)) p.Index = tmp;
+                    if (int.TryParse(t.Substring(6), out var tmp)) 
+                        index = tmp;
                 }
                 else if (t.StartsWith("name=", StringComparison.OrdinalIgnoreCase))
-                    p.NameSub = t.Substring(5);
+                    nameSub = t.Substring(5);
             }
-            return p;
+            return new AutoParams(vidPid, index, nameSub);
         }
 
-        private class SerialPnP
-        {
-            public string Port;
-            public string Caption;
-            public string Description;
-            public List<string> HardwareIds = new List<string>();
-        }
+        private record SerialPnP(string Port, string Caption, string Description, List<string> HardwareIds);
 
         private static List<SerialPnP> QueryPnPSerials()
         {
@@ -96,15 +95,10 @@ namespace LibraryTerminal
                         if (!m.Success) continue;
                         string port = m.Groups[1].Value;
 
-                        var sp = new SerialPnP
-                        {
-                            Port = port,
-                            Caption = cap,
-                            Description = desc
-                        };
-
-                        string[] ids = obj["HardwareID"] as string[];
-                        if (ids != null) sp.HardwareIds.AddRange(ids);
+                        var ids = obj["HardwareID"] as string[];
+                        var hardwareIds = ids != null ? new List<string>(ids) : new List<string>();
+                        
+                        var sp = new SerialPnP(port, cap, desc, hardwareIds);
 
                         list.Add(sp);
                     } catch

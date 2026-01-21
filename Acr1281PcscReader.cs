@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -6,10 +6,17 @@ using System.Threading.Tasks;
 
 namespace LibraryTerminal
 {
-    public sealed class Acr1281PcscReader : IDisposable
+    public sealed class Acr1281PcscReader : ICardReader, IDisposable
     {
         // ===== События =====
-        public event Action<string> OnUid;
+        public event EventHandler<string> CardRead;
+        
+        [Obsolete("Use CardRead event instead")]
+        public event Action<string> OnUid
+        {
+            add { CardRead += (s, uid) => value(uid); }
+            remove { /* Not supported */ }
+        }
 
         // ===== Параметры =====
         private readonly string _preferNameContains;
@@ -162,7 +169,22 @@ namespace LibraryTerminal
 
         private void OnUidSafe(string uid)
         {
-            try { OnUid?.Invoke(uid); } catch { /* ignore user handlers */ }
+            var handler = CardRead;
+            if (handler != null)
+            {
+                try { handler(this, uid); }
+                catch (Exception ex)
+                {
+                    // Логируем, но не падаем
+                    try
+                    {
+                        System.IO.File.AppendAllText(
+                            System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", "acr1281.log"),
+                            $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] OnUid handler exception: {ex.Message}\r\n",
+                            System.Text.Encoding.UTF8);
+                    } catch { /* ignore logging errors */ }
+                }
+            }
         }
 
         private static string PickPiccReader(IntPtr ctx)

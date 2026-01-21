@@ -1,5 +1,5 @@
-﻿using System;
-using System.Linq;
+using System;
+using LibraryTerminal.Core;
 
 namespace LibraryTerminal
 {
@@ -17,13 +17,12 @@ namespace LibraryTerminal
     ///  - Serial: серийный номер экземпляра (28 бит)
     ///  - RawHex: исходные 24 HEX-символа
     /// </summary>
-    public sealed class EpcInfo
-    {
-        public TagKind Kind { get; set; }
-        public int LibraryCode { get; set; }   // 0..65535
-        public uint Serial { get; set; }        // 0..268435455
-        public string RawHex { get; set; }        // 24 hex chars
-    }
+    public record EpcInfo(
+        TagKind Kind,
+        int LibraryCode,
+        uint Serial,
+        string RawHex
+    );
 
     /// <summary>
     /// Разбор EPC-96 согласно протоколу из ИРБИС:
@@ -40,47 +39,54 @@ namespace LibraryTerminal
 
         /// <summary>
         /// Принимает EPC как строку из 24 HEX-символов, возвращает распарсенный объект.
-        /// Если формат неверен или "шапка" не совпала — вернёт null.
+        /// Если формат неверен или "шапка" не совпала — вернёт None.
         /// </summary>
-        public static EpcInfo Parse(string epcHex)
+        public static Option<EpcInfo> Parse(string epcHex)
         {
-            if (string.IsNullOrWhiteSpace(epcHex) || epcHex.Length != 24) return null;
+            if (string.IsNullOrWhiteSpace(epcHex) || epcHex.Length != 24) 
+                return Option<EpcInfo>.None;
 
-            byte[] bytes;
+            var bytes = new byte[12];
             try
             {
-                // Преобразуем 24 HEX-символа → 12 байт
-                bytes = Enumerable.Range(0, 12)
-                    .Select(i => Convert.ToByte(epcHex.Substring(i * 2, 2), 16))
-                    .ToArray();
-            } catch { return null; }
+                // Преобразуем 24 HEX-символа → 12 байт (без LINQ для производительности)
+                for (var i = 0; i < 12; i++)
+                {
+                    bytes[i] = Convert.ToByte(epcHex.Substring(i * 2, 2), 16);
+                }
+            } 
+            catch 
+            { 
+                return Option<EpcInfo>.None; 
+            }
 
             // 1) Проверяем "шапку"
-            for (int i = 0; i < 6; i++)
-                if (bytes[i] != Header[i]) return null;
+            for (var i = 0; i < 6; i++)
+            {
+                if (bytes[i] != Header[i]) 
+                    return Option<EpcInfo>.None;
+            }
 
             // 2) Читаем младшие 48 бит в ulong
             ulong low48 = 0;
-            for (int i = 6; i < 12; i++)
+            for (var i = 6; i < 12; i++)
+            {
                 low48 = (low48 << 8) | bytes[i];
+            }
 
             // 3) Разбираем поля согласно протоколу
-            int library = (int)((low48 >> 32) & 0xFFFF);
-            int kindNibble = (int)((low48 >> 28) & 0xF);
-            uint serial = (uint)(low48 & 0x0FFFFFFF);
+            var library = (int)((low48 >> 32) & 0xFFFF);
+            var kindNibble = (int)((low48 >> 28) & 0xF);
+            var serial = (uint)(low48 & 0x0FFFFFFF);
 
-            TagKind kind;
-            if (kindNibble == 0x0) kind = TagKind.Book;
-            else if (kindNibble == 0xF) kind = TagKind.Card;
-            else kind = TagKind.Unknown;
-
-            return new EpcInfo
+            var kind = kindNibble switch
             {
-                Kind = kind,
-                LibraryCode = library,
-                Serial = serial,
-                RawHex = epcHex
+                0x0 => TagKind.Book,
+                0xF => TagKind.Card,
+                _ => TagKind.Unknown
             };
+
+            return Option<EpcInfo>.Some(new EpcInfo(kind, library, serial, epcHex));
         }
     }
 }

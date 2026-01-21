@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.IO.Ports;
 using System.Text;
@@ -259,8 +259,12 @@ namespace LibraryTerminal
             } catch (TimeoutException) { } catch (Exception ex)
             {
                 try { OnClosed(ex); } catch { }
-                Stop();
-                Start();
+                // Не вызываем Stop/Start здесь - WorkerLoop сам переподключится
+                // Просто логируем
+                try
+                {
+                    Logger.Append("serial.log", $"OnData exception: {ex.Message}");
+                } catch { }
             }
         }
 

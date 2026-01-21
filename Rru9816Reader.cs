@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -10,9 +10,16 @@ namespace LibraryTerminal
     /// RRU9816 via RRU9816.dll — опрос EPC через Inventory_G2 (command mode).
     /// По умолчанию: COM5 @ 57600, addr=0x00.
     /// </summary>
-    public sealed class Rru9816Reader : IDisposable
+    public sealed class Rru9816Reader : IBookReader, IDisposable
     {
-        public event Action<string> OnEpcHex;
+        public event EventHandler<string> TagRead;
+        
+        [Obsolete("Use TagRead event instead")]
+        public event Action<string> OnEpcHex
+        {
+            add { TagRead += (s, epc) => value(epc); }
+            remove { /* Not supported */ }
+        }
 
         private volatile bool _running;
         private Thread _thread;
@@ -159,7 +166,16 @@ namespace LibraryTerminal
                     {
                         var epcBytes = new byte[epcLen];
                         Buffer.BlockCopy(epcRaw, start, epcBytes, 0, epcLen);
-                        OnEpcHex?.Invoke(BytesToHex(epcBytes));
+                        
+                        var handler = TagRead;
+                        if (handler != null)
+                        {
+                            try { handler(this, BytesToHex(epcBytes)); }
+                            catch (Exception ex)
+                            {
+                                try { Log($"OnEpcHex handler exception: {ex.Message}"); } catch { }
+                            }
+                        }
                     }
                     m += epcLenPlus1 + 1; // +1 за байт длины
                 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Text.RegularExpressions;
 using System.Configuration;
@@ -6,9 +6,16 @@ using System.Configuration;
 namespace LibraryTerminal
 {
     // ===== ЧИТАТЕЛЬСКИЕ КАРТЫ (низкочастотный/PCSC-эмуляция по COM) кря кря кря =====
-    internal class CardReaderSerial : SerialWorker
+    internal class CardReaderSerial : SerialWorker, ICardReader
     {
-        public event Action<string> OnUid;
+        public event EventHandler<string> CardRead;
+        
+        [Obsolete("Use CardRead event instead")]
+        public event Action<string> OnUid
+        {
+            add { CardRead += (s, uid) => value(uid); }
+            remove { /* Not supported */ }
+        }
 
         private readonly int _debounceMs;
         private string _last;
@@ -95,7 +102,15 @@ namespace LibraryTerminal
             if (_last == uid && (now - _lastAt).TotalMilliseconds < _debounceMs) return;
             _last = uid; _lastAt = now;
 
-            try { OnUid?.Invoke(uid); } catch { }
+            var handler = CardRead;
+            if (handler != null)
+            {
+                try { handler(this, uid); }
+                catch (Exception ex)
+                {
+                    try { Logger.Append("iqrfid.log", $"OnUid handler exception: {ex.Message}"); } catch { }
+                }
+            }
             SafeLog("UID: " + uid);
 
             // локальная проверка
@@ -121,9 +136,16 @@ namespace LibraryTerminal
     }
 
     // ===== КНИЖНЫЕ RFID (через COM) =====
-    internal class BookReaderSerial : SerialWorker
+    internal class BookReaderSerial : SerialWorker, IBookReader
     {
-        public event Action<string> OnTag;
+        public event EventHandler<string> TagRead;
+        
+        [Obsolete("Use TagRead event instead")]
+        public event Action<string> OnTag
+        {
+            add { TagRead += (s, tag) => value(tag); }
+            remove { /* Not supported */ }
+        }
 
         private readonly int _debounceMs;
         private string _last;
@@ -147,12 +169,21 @@ namespace LibraryTerminal
             var now = DateTime.UtcNow;
             if (_last == tag && (now - _lastAt).TotalMilliseconds < _debounceMs) return;
             _last = tag; _lastAt = now;
-            OnTag?.Invoke(tag);
+            
+            var handler = TagRead;
+            if (handler != null)
+            {
+                try { handler(this, tag); }
+                catch (Exception ex)
+                {
+                    try { Logger.Append("book_reader.log", $"OnTag handler exception: {ex.Message}"); } catch { }
+                }
+            }
         }
     }
 
     // ===== АРДУИНО-ШКАФ =====
-    internal class ArduinoClientSerial : SerialWorker, IArduino
+    internal class ArduinoClientSerial : SerialWorker, IArduino, IArduinoController
     {
         private readonly int _syncTimeoutMs;
         private readonly AutoResetEvent _respEvent = new AutoResetEvent(false);
@@ -212,20 +243,53 @@ namespace LibraryTerminal
         }
 
         // === Синхронные команды (с ожиданием ответа) ===
+        public async Task<bool> HasSpaceAsync()
+        {
+            return await Task.Run(() => HasSpace());
+        }
+
         public bool HasSpace()
         {
-            var resp = Request("SPACE?", _syncTimeoutMs);
-            var t = (resp ?? "").Trim().ToUpperInvariant();
-            if (t.StartsWith("SPACE")) t = t.Substring(5).TrimStart(' ', ':', '=');
-            return t.StartsWith("1");
+            if (!IsOpen)
+            {
+                SafeLog("HAS_SPACE: port not open, returning false");
+                return false;
+            }
+
+            try
+            {
+                var resp = Request("SPACE?", _syncTimeoutMs);
+                var t = (resp ?? "").Trim().ToUpperInvariant();
+                if (t.StartsWith("SPACE")) t = t.Substring(5).TrimStart(' ', ':', '=');
+                return t.StartsWith("1");
+            }
+            catch (Exception ex)
+            {
+                SafeLog($"HAS_SPACE exception: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task OpenBinAsync()
+        {
+            await Task.Run(() => OpenBin());
         }
 
         public void OpenBin()
         {
+            if (!IsOpen)
+            {
+                SafeLog("OPENBIN: port not open");
+                throw new InvalidOperationException("Serial port is not open");
+            }
+
             var resp = Request("OPENBIN", _syncTimeoutMs + 10000); // +10s на механику
             if (!"OK".Equals(resp?.Trim(), StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Cabinet responded: " + (resp ?? "<empty>"));
         }
+
+        // === Реализация IArduinoController ===
+        public void SendCommand(string cmd) => Send(cmd);
 
         // === Асинхронные команды (без ожидания ответа) - реализация IArduino ===
         public new void Send(string cmd)
@@ -240,10 +304,13 @@ namespace LibraryTerminal
         }
 
         public void Ok() => Send("OK");
+        public void SendOk() => Send("OK");
 
         public void Error() => Send("ERR");
+        public void SendError() => Send("ERR");
 
         public void Beep(int ms = 120) => Send($"BEEP:{ms}");
+        public void SendBeep(int milliseconds = 120) => Send($"BEEP:{milliseconds}");
 
         // === Бинарные команды управления шкафом (формат из control.pb) ===
         // Пакет: FF, CMD, fromX, fromY, toX, toY, sizeX, sizeY (8 байт)
